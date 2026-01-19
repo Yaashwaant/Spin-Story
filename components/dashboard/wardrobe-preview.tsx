@@ -55,16 +55,16 @@ const defaultItems: ClothingItem[] = [
 ]
 
 export function WardrobePreview({ items }: WardrobePreviewProps) {
-  const displayItems = items && items.length > 0 ? items.slice(0, 5) : defaultItems
+  const displayItems = items && items.length > 0 ? items : defaultItems
 
   return (
-    <Card className="rounded-3xl">
+    <Card className="min-h-[420px] rounded-3xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold">Wardrobe Preview</CardTitle>
         <Check className="h-4 w-4 text-primary" />
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid max-h-[300px] grid-cols-5 gap-2 overflow-hidden">
           {displayItems.map((item) => (
             <div
               key={item.id}

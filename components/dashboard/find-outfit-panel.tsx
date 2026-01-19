@@ -16,16 +16,53 @@ const seasons = [
   { name: "Spring", icon: Flower, activeClasses: "bg-green-400/20 text-green-200" },
 ]
 
-export function FindOutfitPanel() {
+const seasonItems: Record<string, string[]> = {
+  Summer: ["Linen shirt", "Chino shorts", "Canvas sneakers"],
+  Autumn: ["Chunky knit sweater", "Dark denim", "Chelsea boots"],
+  Winter: ["Wool coat", "Thermal knit", "Leather boots"],
+  Spring: ["Light trench", "Pastel top", "White sneakers"],
+}
+
+const moodAccents: Record<string, string> = {
+  Relaxed: "Soft scarf",
+  Playful: "Statement accessory",
+  Elegant: "Polished watch",
+  Confident: "Structured bag",
+}
+
+export interface OutfitSuggestion {
+  title: string
+  summary: string
+  items: string[]
+}
+
+interface FindOutfitPanelProps {
+  onGenerateOutfit?: (suggestion: OutfitSuggestion) => void
+}
+
+export function FindOutfitPanel({ onGenerateOutfit }: FindOutfitPanelProps) {
   const [selectedMoods, setSelectedMoods] = useState<string[]>(["Playful"])
   const [selectedSeason, setSelectedSeason] = useState("Autumn")
+  const [occasion, setOccasion] = useState("")
 
   const toggleMood = (mood: string) => {
     setSelectedMoods((prev) => (prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]))
   }
 
+  const handleGenerate = () => {
+    const moodLabel = selectedMoods[0] || "Playful"
+    const items = seasonItems[selectedSeason] || seasonItems.Autumn
+    const accent = moodAccents[moodLabel] || moodAccents.Playful
+    const suggestion: OutfitSuggestion = {
+      title: `${moodLabel} ${selectedSeason} Look`,
+      summary: `For ${occasion || "your plans"} • ${selectedMoods.join(", ")} mood`,
+      items: [...items, accent],
+    }
+    onGenerateOutfit?.(suggestion)
+  }
+
   return (
-    <Card className="rounded-3xl">
+    <Card className="min-h-[420px] rounded-3xl">
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -45,7 +82,12 @@ export function FindOutfitPanel() {
           <label className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Where are you going?
           </label>
-          <Input className="h-10 rounded-full text-sm" placeholder="Tell me where you're going — I'll style you." />
+          <Input
+            className="h-10 rounded-full text-sm"
+            placeholder="Tell me where you're going — I'll style you."
+            value={occasion}
+            onChange={(event) => setOccasion(event.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
@@ -91,7 +133,7 @@ export function FindOutfitPanel() {
         </div>
 
         <div className="mt-3">
-          <Button className="h-9 w-full rounded-full text-sm font-semibold">
+          <Button className="h-9 w-full rounded-full text-sm font-semibold" onClick={handleGenerate}>
             Generate Outfit
           </Button>
         </div>
