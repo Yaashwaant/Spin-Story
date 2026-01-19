@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const customerId = searchParams.get('customerId')
 
+    console.log('=== WARDROBE API: GET request with customerId:', customerId);
+
     if (!customerId) {
       return NextResponse.json({ error: "Customer ID is required" }, { status: 400 })
     }
@@ -29,8 +31,11 @@ export async function GET(req: NextRequest) {
       .where('customerId', '==', customerId)
       .get()
 
+    console.log('=== WARDROBE API: Found', snapshot.docs.length, 'items for customerId:', customerId);
+
     const wardrobeItems: WardrobeItem[] = snapshot.docs.map(doc => {
       const data = doc.data()
+      console.log('=== WARDROBE API: Item data:', data);
       return {
         id: doc.id,
         name: data.name || '',
@@ -58,6 +63,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, image, type, color, season, styles, customerId } = body
 
+    console.log('=== WARDROBE API: POST request with data:', { name, image, type, color, season, styles, customerId });
+
     if (!customerId || !name || !type || !color) {
       return NextResponse.json({ 
         error: "Missing required fields: customerId, name, type, color are required" 
@@ -78,6 +85,9 @@ export async function POST(req: NextRequest) {
     }
 
     const docRef = await adminDb.collection('wardrobe').add(wardrobeData)
+
+    console.log('=== WARDROBE API: Item saved successfully with ID:', docRef.id);
+    console.log('=== WARDROBE API: Saved data:', wardrobeData);
 
     return NextResponse.json({ 
       success: true, 

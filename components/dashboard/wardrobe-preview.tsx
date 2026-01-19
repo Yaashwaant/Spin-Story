@@ -2,7 +2,8 @@
 
 import type React from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Check, Leaf, Snowflake, Sun } from "lucide-react"
+import { Check, Leaf, Snowflake, Sun, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ClothingItem {
   id: string
@@ -14,54 +15,29 @@ interface ClothingItem {
 
 interface WardrobePreviewProps {
   items?: ClothingItem[]
+  onRefresh?: () => void
 }
 
-const defaultItems: ClothingItem[] = [
-  {
-    id: "1",
-    name: "Denim Jacket",
-    imageUrl: "/classic-denim-jacket.png",
-    category: "outerwear",
-    createdAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Black Blazer",
-    imageUrl: "/black-blazer.jpg",
-    category: "outerwear",
-    createdAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Floral Midi Dress",
-    imageUrl: "/floral-dress.png",
-    category: "dresses",
-    createdAt: new Date(),
-  },
-  {
-    id: "4",
-    name: "Leather Boots",
-    imageUrl: "/brown-leather-boots.png",
-    category: "shoes",
-    createdAt: new Date(),
-  },
-  {
-    id: "5",
-    name: "Denim Jeans",
-    imageUrl: "/denim-jeans.png",
-    category: "bottoms",
-    createdAt: new Date(),
-  },
-]
-
-export function WardrobePreview({ items }: WardrobePreviewProps) {
-  const displayItems = items && items.length > 0 ? items : defaultItems
+export function WardrobePreview({ items, onRefresh }: WardrobePreviewProps) {
+  const displayItems = items ?? []
 
   return (
     <Card className="min-h-[420px] rounded-3xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-semibold">Wardrobe Preview</CardTitle>
-        <Check className="h-4 w-4 text-primary" />
+        <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={onRefresh}
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          )}
+          <Check className="h-4 w-4 text-primary" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid max-h-[300px] grid-cols-5 gap-2 overflow-hidden">

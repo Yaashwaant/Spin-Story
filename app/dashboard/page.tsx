@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Navbar } from "@/components/layout/navbar"
 import { FindOutfitPanel, type OutfitSuggestion } from "@/components/dashboard/find-outfit-panel"
 import { WardrobePreview } from "@/components/dashboard/wardrobe-preview"
@@ -10,9 +10,45 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+interface ClothingItem {
+  id: string
+  name: string
+  imageUrl: string
+  category: string
+  createdAt: Date
+}
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null)
+  const [wardrobeItems, setWardrobeItems] = useState<ClothingItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const customerId = user?.id || "demo-customer"
+
+  const refreshWardrobeItems = useCallback(() => {
+    if (!user) return
+    setLoading(true)
+    fetch("/api/dashboard")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data?.recentItems) setWardrobeItems(data.data.recentItems)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [user])
+
+  useEffect(() => {
+    refreshWardrobeItems()
+  }, [user, refreshTrigger])
+
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1)
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +63,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <WardrobePreview />
+            <WardrobePreview items={wardrobeItems} onRefresh={refreshWardrobeItems} />
           </div>
 
           <div className="lg:col-span-4">

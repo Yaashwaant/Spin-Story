@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ClothingCard, type ClothingItemData } from "@/components/wardrobe/clothing-card"
 import { UploadDropzone } from "@/components/wardrobe/upload-dropzone"
 import { FilterSidebar } from "@/components/wardrobe/filter-sidebar"
@@ -8,68 +8,43 @@ import { EmptyWardrobeState } from "@/components/wardrobe/empty-state"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Search, Grid3X3, LayoutList } from "lucide-react"
-
-const sampleWardrobe: ClothingItemData[] = [
-  {
-    id: "1",
-    name: "Classic Denim Jacket",
-    image: "/classic-denim-jacket.png",
-    type: "Jacket",
-    color: "Blue",
-    season: "All Season",
-    styles: ["Casual"],
-  },
-  {
-    id: "2",
-    name: "Black Blazer",
-    image: "/black-blazer.jpg",
-    type: "Jacket",
-    color: "Black",
-    season: "All Season",
-    styles: ["Formal"],
-  },
-  {
-    id: "3",
-    name: "Floral Summer Dress",
-    image: "/floral-dress.png",
-    type: "Dress",
-    color: "Multi",
-    season: "Summer",
-    styles: ["Casual"],
-  },
-  {
-    id: "4",
-    name: "Brown Leather Boots",
-    image: "/brown-leather-boots.png",
-    type: "Footwear",
-    color: "Brown",
-    season: "Autumn",
-    styles: ["Casual"],
-  },
-  {
-    id: "5",
-    name: "Classic Denim Jeans",
-    image: "/denim-jeans.png",
-    type: "Bottoms",
-    color: "Blue",
-    season: "All Season",
-    styles: ["Casual"],
-  },
-  {
-    id: "6",
-    name: "Casual T-Shirt",
-    image: "/casual-tshirt.png",
-    type: "Top",
-    color: "White",
-    season: "Summer",
-    styles: ["Casual", "Sporty"],
-  },
-]
+import { useAuth } from "@/components/auth/auth-provider"
 
 export function WardrobeContent() {
-  const [wardrobe, setWardrobe] = useState<ClothingItemData[]>(sampleWardrobe)
+  const { user } = useAuth()
+  const [wardrobe, setWardrobe] = useState<ClothingItemData[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const customerId = user?.id || "demo-customer"
+
+  // Fetch wardrobe items from API
+  const fetchWardrobeItems = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/wardrobe?customerId=${customerId}`)
+      const data = await response.json()
+      
+      if (data.items) {
+        setWardrobe(data.items)
+      }
+    } catch (error) {
+      console.error('Failed to fetch wardrobe items:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [customerId])
+
+  // Fetch items on component mount and when customerId changes
+  useEffect(() => {
+    fetchWardrobeItems()
+  }, [fetchWardrobeItems])
+
+  // Handle successful upload completion
+  const handleUploadComplete = useCallback(() => {
+    // Refresh wardrobe items after successful upload
+    fetchWardrobeItems()
+  }, [fetchWardrobeItems])
 
   const handleRemoveItem = (id: string) => {
     setWardrobe((prev) => prev.filter((item) => item.id !== id))
@@ -92,7 +67,7 @@ export function WardrobeContent() {
       {/* Main Content */}
       <div className="space-y-6 lg:col-span-3">
         {/* Upload Zone */}
-        <UploadDropzone />
+        <UploadDropzone onUploadComplete={handleUploadComplete} customerId={customerId} />
 
         {/* Search & View Controls */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -121,7 +96,14 @@ export function WardrobeContent() {
         </div>
 
         {/* Wardrobe Grid */}
-        {filteredWardrobe.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-sm text-muted-foreground">Loading wardrobe items...</p>
+            </div>
+          </div>
+        ) : filteredWardrobe.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredWardrobe.map((item) => (
               <ClothingCard key={item.id} item={item} onRemove={handleRemoveItem} />

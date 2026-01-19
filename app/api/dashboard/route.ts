@@ -28,26 +28,41 @@ export async function GET(req: NextRequest) {
     const userDoc = await adminDb.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
+    console.log('=== DASHBOARD API: userId from token:', userId);
+    console.log('=== DASHBOARD API: Using userId as customerId for query');
+
     // Try to get wardrobe items, but handle if collection doesn't exist
     let wardrobeItems = [];
     let recentOutfits = [];
     let savedOutfits = [];
 
     try {
+      console.log('=== DASHBOARD API: Querying wardrobe with customerId:', userId);
       const wardrobeSnapshot = await adminDb
-        .collection("wardrobeItems")
-        .where("userId", "==", userId)
-        .orderBy("createdAt", "desc")
+        .collection("wardrobe")
+        .where("customerId", "==", userId)
         .limit(6)
         .get();
       
-      wardrobeItems = wardrobeSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      }));
+      console.log('=== DASHBOARD API: Found', wardrobeSnapshot.docs.length, 'wardrobe items');
+      wardrobeItems = wardrobeSnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('=== DASHBOARD API: Item data:', data);
+        return {
+          id: doc.id,
+          name: data.name,
+          imageUrl: data.image,
+          category: data.type,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+        };
+      });
+      
+      // Sort by createdAt manually since we can't use orderBy without index
+      wardrobeItems.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
       console.log("Wardrobe items collection not found or empty, using mock data");
+      console.log('=== DASHBOARD API: Error querying wardrobe:', error);
       // Mock wardrobe items for new users
       wardrobeItems = [
         {
@@ -78,7 +93,6 @@ export async function GET(req: NextRequest) {
       const outfitsSnapshot = await adminDb
         .collection("outfits")
         .where("userId", "==", userId)
-        .orderBy("createdAt", "desc")
         .limit(4)
         .get();
       
@@ -87,6 +101,9 @@ export async function GET(req: NextRequest) {
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.() || new Date(),
       }));
+      
+      // Sort by createdAt manually since we can't use orderBy without index
+      recentOutfits.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
       console.log("Outfits collection not found or empty, using mock data");
       // Mock recent outfits for new users
@@ -112,7 +129,6 @@ export async function GET(req: NextRequest) {
       const savedSnapshot = await adminDb
         .collection("savedOutfits")
         .where("userId", "==", userId)
-        .orderBy("createdAt", "desc")
         .limit(4)
         .get();
       
@@ -121,6 +137,9 @@ export async function GET(req: NextRequest) {
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.() || new Date(),
       }));
+      
+      // Sort by createdAt manually since we can't use orderBy without index
+      savedOutfits.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
       console.log("Saved outfits collection not found or empty, using mock data");
       // Mock saved outfits for new users
