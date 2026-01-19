@@ -28,26 +28,38 @@ export async function GET(req: NextRequest) {
     const userDoc = await adminDb.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    console.log('=== DASHBOARD API: userId from token:', userId);
-    console.log('=== DASHBOARD API: Using userId as customerId for query');
-
     // Try to get wardrobe items, but handle if collection doesn't exist
     let wardrobeItems = [];
     let recentOutfits = [];
     let savedOutfits = [];
 
-    try {
-      console.log('=== DASHBOARD API: Querying wardrobe with customerId:', userId);
-      const wardrobeSnapshot = await adminDb
+    // Fetch all data in parallel for better performance
+    const [wardrobePromise, outfitsPromise, savedPromise] = await Promise.allSettled([
+      // Wardrobe items
+      adminDb
         .collection("wardrobe")
         .where("customerId", "==", userId)
         .limit(6)
-        .get();
-      
-      console.log('=== DASHBOARD API: Found', wardrobeSnapshot.docs.length, 'wardrobe items');
+        .get(),
+      // Outfits
+      adminDb
+        .collection("outfits")
+        .where("userId", "==", userId)
+        .limit(4)
+        .get(),
+      // Saved outfits
+      adminDb
+        .collection("savedOutfits")
+        .where("userId", "==", userId)
+        .limit(4)
+        .get()
+    ]);
+
+    // Process wardrobe items
+    if (wardrobePromise.status === 'fulfilled') {
+      const wardrobeSnapshot = wardrobePromise.value;
       wardrobeItems = wardrobeSnapshot.docs.map(doc => {
         const data = doc.data();
-        console.log('=== DASHBOARD API: Item data:', data);
         return {
           id: doc.id,
           name: data.name,
@@ -57,12 +69,10 @@ export async function GET(req: NextRequest) {
           createdAt: data.createdAt?.toDate?.() || new Date(),
         };
       });
-      
       // Sort by createdAt manually since we can't use orderBy without index
       wardrobeItems.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    } catch (error) {
+    } else {
       console.log("Wardrobe items collection not found or empty, using mock data");
-      console.log('=== DASHBOARD API: Error querying wardrobe:', error);
       // Mock wardrobe items for new users
       wardrobeItems = [
         {
@@ -89,22 +99,17 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    try {
-      const outfitsSnapshot = await adminDb
-        .collection("outfits")
-        .where("userId", "==", userId)
-        .limit(4)
-        .get();
-      
+    // Process outfits
+    if (outfitsPromise.status === 'fulfilled') {
+      const outfitsSnapshot = outfitsPromise.value;
       recentOutfits = outfitsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.() || new Date(),
       }));
-      
       // Sort by createdAt manually since we can't use orderBy without index
       recentOutfits.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    } catch (error) {
+    } else {
       console.log("Outfits collection not found or empty, using mock data");
       // Mock recent outfits for new users
       recentOutfits = [
@@ -125,22 +130,17 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    try {
-      const savedSnapshot = await adminDb
-        .collection("savedOutfits")
-        .where("userId", "==", userId)
-        .limit(4)
-        .get();
-      
+    // Process saved outfits
+    if (savedPromise.status === 'fulfilled') {
+      const savedSnapshot = savedPromise.value;
       savedOutfits = savedSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.() || new Date(),
       }));
-      
       // Sort by createdAt manually since we can't use orderBy without index
       savedOutfits.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    } catch (error) {
+    } else {
       console.log("Saved outfits collection not found or empty, using mock data");
       // Mock saved outfits for new users
       savedOutfits = [

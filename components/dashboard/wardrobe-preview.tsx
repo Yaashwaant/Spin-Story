@@ -67,11 +67,7 @@ export function WardrobePreview({ items, onRefresh }: WardrobePreviewProps) {
           ))}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Sun className="h-3 w-3" />
-          <span>Spring/Summer</span>
-          <span className="mx-1">•</span>
-          <Leaf className="h-3 w-3" />
-          <span>Fall/Winter</span>
+         
         </div>
       </CardContent>
     </Card>

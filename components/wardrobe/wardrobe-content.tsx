@@ -17,6 +17,7 @@ export function WardrobeContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const customerId = user?.id || "demo-customer"
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
   // Fetch wardrobe items from API
   const fetchWardrobeItems = useCallback(async () => {
@@ -40,6 +41,14 @@ export function WardrobeContent() {
     fetchWardrobeItems()
   }, [fetchWardrobeItems])
 
+  // Debounce search query to reduce filtering frequency
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
   // Handle successful upload completion
   const handleUploadComplete = useCallback(() => {
     // Refresh wardrobe items after successful upload
@@ -52,9 +61,9 @@ export function WardrobeContent() {
 
   const filteredWardrobe = wardrobe.filter(
     (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.color.toLowerCase().includes(searchQuery.toLowerCase()),
+      item.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.type.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.color.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
   )
 
   return (
