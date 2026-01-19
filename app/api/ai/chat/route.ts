@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
   const customerPreferences = body.customerPreferences as any | undefined
   const wardrobeUploaded = body.wardrobeUploaded as boolean | undefined
   const outfitPlanCount = body.outfitPlanCount as number | undefined
+  const frontendWardrobeItems = body.wardrobeItems as any[] | undefined
 
-  console.log("Chat API extracted values:", { customerId, role, intent, message, hasProfile: !!customerProfile, hasPreferences: !!customerPreferences, wardrobeUploaded, outfitPlanCount })
+  console.log("Chat API extracted values:", { customerId, role, intent, message, hasProfile: !!customerProfile, hasPreferences: !!customerPreferences, wardrobeUploaded, outfitPlanCount, hasFrontendWardrobeItems: !!frontendWardrobeItems })
 
   if (!customerId || customerId === "unknown" || !role || !intent || !message) {
     console.log("Chat API validation failed - missing required fields:", { customerId, role, intent, message })
@@ -33,9 +34,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
     }
 
-    // Fetch customer's wardrobe items
+    // Use wardrobe items from frontend (more reliable than fetching again)
     let wardrobeItems: any[] = []
-    if (wardrobeUploaded && customerId) {
+    if (frontendWardrobeItems && frontendWardrobeItems.length > 0) {
+      wardrobeItems = frontendWardrobeItems.map(item => ({
+        id: item.id || '',
+        name: item.name || '',
+        type: item.type || '',
+        color: item.color || '',
+        season: item.season || '',
+        styles: item.styles || [],
+        image: item.image || ''
+      }))
+      console.log(`Using ${wardrobeItems.length} wardrobe items from frontend for customer ${customerId}`)
+    } else if (wardrobeUploaded && customerId) {
+      // Fallback: fetch from database if frontend data not available
       try {
         const wardrobeSnapshot = await adminDb
           .collection('wardrobe')
@@ -51,6 +64,7 @@ export async function POST(req: NextRequest) {
             color: data.color || '',
             season: data.season || '',
             styles: data.styles || [],
+            image: data.image || ''
           }
         })
         console.log(`Found ${wardrobeItems.length} wardrobe items for customer ${customerId}`)
@@ -80,10 +94,48 @@ export async function POST(req: NextRequest) {
     }
     
     if (wardrobeItems.length > 0) {
-      customerContext.push(`Current Wardrobe Items (${wardrobeItems.length} items):\n${JSON.stringify(wardrobeItems, null, 2)}`)
+      const wardrobeSummary = wardrobeItems.map(item => 
+        `- ${item.name} (${item.type || item.category || 'clothing'}, ${item.color || 'various colors'}, ${item.season || 'all seasons'})`
+      ).join('\n')
+      customerContext.push(`CURRENT WARDROBE INVENTORY (${wardrobeItems.length} items):\n${wardrobeSummary}\n\nIMPORTANT: You can ONLY use these specific items when making outfit suggestions. Do not suggest any items not listed above.`)
+    } else {
+      customerContext.push(`CURRENT WARDROBE: No items uploaded yet`)
     }
 
-    const systemPrompt = `You are a professional AI stylist assistant for a BDR (Business Development Representative) working with fashion customers. 
+    // Different system prompts based on intent
+    let systemPrompt: string
+    
+    if (intent === "general") {
+      systemPrompt = `You are a professional AI stylist assistant for a BDR (Business Development Representative) working with fashion customers. 
+
+Customer Context:
+${customerContext.join('\n')}
+
+Your role is to provide helpful, conversational fashion advice and styling tips. You should:
+1. Be professional, friendly, and knowledgeable about fashion
+2. Provide practical advice based on customer preferences and context
+3. Answer questions about styling, trends, colors, and fashion best practices
+4. Give general guidance about what works well together
+5. Be conversational and engaging, like a knowledgeable friend
+
+IMPORTANT WARDROBE AWARENESS RULES:
+- When discussing items, ONLY reference what the customer actually has in their wardrobe (provided above)
+- If customer asks about items they don't have, explain what they could look for or suggest alternatives from their existing wardrobe
+- Be creative with combining their existing items rather than suggesting new purchases
+- Always acknowledge their current wardrobe inventory when giving advice
+
+RESPONSE STYLE:
+- Use natural, conversational language
+- Be helpful and encouraging
+- Provide specific, actionable advice
+- Use tables ONLY when it helps organize information clearly
+- Keep responses concise but comprehensive
+- Use bullet points or numbered lists when helpful
+
+Always maintain a helpful and consultative tone. Reference the customer's profile, preferences, and existing wardrobe when giving advice.`
+    } else {
+      // For "plan" intent - keep the table format
+      systemPrompt = `You are a professional AI stylist assistant for a BDR (Business Development Representative) working with fashion customers. 
 
 Customer Context:
 ${customerContext.join('\n')}
@@ -118,6 +170,7 @@ Day -1 | Travel Prep - Comfortable leggings, Oversized sweater | For packing and
 **IMPORTANT: DO NOT ADD ANY TEXT BEFORE OR AFTER THE TABLE**
 
 Always maintain a helpful and consultative tone. Reference the customer's profile, preferences, and existing wardrobe when making suggestions.`
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",

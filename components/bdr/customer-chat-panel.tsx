@@ -9,86 +9,8 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CustomerUploadModal } from "@/components/bdr/customer-upload-modal"
 import { Plus } from "lucide-react"
-
-// Helper function to parse markdown table to HTML
-function parseTableToHtml(markdown: string, isChatMessage: boolean = false): string {
-  if (!markdown || !markdown.includes('|')) {
-    return markdown
-  }
-
-  const lines = markdown.split('\n')
-  let html = ''
-  let inTable = false
-  
-  for (const line of lines) {
-    const trimmedLine = line.trim()
-    
-    // Skip separator lines (lines with only dashes and pipes)
-    if (trimmedLine.match(/^\s*\|?\s*-+\s*\|?\s*-+\s*\|?\s*-+\s*\|?\s*$/)) {
-      continue
-    }
-    
-    // Check if this is a table row
-    if (trimmedLine.includes('|')) {
-      if (!inTable) {
-        if (isChatMessage) {
-          html += '<table class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden my-2">\n'
-          html += '  <thead class="bg-gray-100">\n    <tr>\n'
-          
-          // Parse header row
-          const headers = trimmedLine.split('|').map(h => h.trim()).filter(h => h)
-          headers.forEach(header => {
-            html += `      <th class="px-2 py-1 text-left font-semibold text-gray-700 border border-gray-300 text-xs">${header}</th>\n`
-          })
-        } else {
-          html += '<table class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">\n'
-          html += '  <thead class="bg-gray-100">\n    <tr>\n'
-          
-          // Parse header row
-          const headers = trimmedLine.split('|').map(h => h.trim()).filter(h => h)
-          headers.forEach(header => {
-            html += `      <th class="px-3 py-2 text-left font-semibold text-gray-700 border border-gray-300">${header}</th>\n`
-          })
-        }
-        
-        html += '    </tr>\n  </thead>\n  <tbody>\n'
-        inTable = true
-      } else {
-        // Parse data row
-        const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c)
-        if (cells.length > 0) {
-          if (isChatMessage) {
-            html += '    <tr class="border-b border-gray-200">\n'
-            cells.forEach(cell => {
-              html += `      <td class="px-2 py-1 text-gray-800 border border-gray-300 text-xs">${cell}</td>\n`
-            })
-          } else {
-            html += '    <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">\n'
-            cells.forEach(cell => {
-              html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${cell}</td>\n`
-            })
-          }
-          html += '    </tr>\n'
-        }
-      }
-    } else if (inTable) {
-      // End of table
-      html += '  </tbody>\n</table>\n'
-      inTable = false
-      html += trimmedLine + '\n'
-    } else {
-      // Non-table content
-      html += trimmedLine + '\n'
-    }
-  }
-  
-  // Close table if still open
-  if (inTable) {
-    html += '  </tbody>\n</table>\n'
-  }
-  
-  return html.trim()
-}
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 type ChatRole = "user" | "bdr" | "assistant"
 
@@ -114,6 +36,110 @@ interface CustomerChatPanelProps {
   customerPreferences?: any
   wardrobeUploaded?: boolean
   outfitPlanCount?: number
+}
+
+function normalizeMarkdown(content: string): string {
+  const withLists = content
+    .replace(/:\s*(\d+\.)\s+/g, ":\n\n$1 ")
+    .replace(/\s(\d+\.)\s+/g, "\n$1 ")
+  return withLists.trim()
+}
+
+const markdownComponents = {
+  a: (props: any) => (
+    <a
+      href={props.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium underline underline-offset-2 hover:no-underline"
+    >
+      {props.children}
+    </a>
+  ),
+  p: (props: any) => <p className="leading-relaxed whitespace-pre-wrap">{props.children}</p>,
+  ul: (props: any) => <ul className="list-disc pl-5 space-y-1">{props.children}</ul>,
+  ol: (props: any) => <ol className="list-decimal pl-5 space-y-1">{props.children}</ol>,
+  li: (props: any) => <li className="leading-relaxed">{props.children}</li>,
+  table: (props: any) => (
+    <div className="w-full overflow-x-auto">
+      <table className="w-full border-collapse border border-border/60 rounded-lg overflow-hidden">
+        {props.children}
+      </table>
+    </div>
+  ),
+  thead: (props: any) => <thead className="bg-muted/40">{props.children}</thead>,
+  th: (props: any) => (
+    <th className="px-3 py-2 text-left font-semibold border border-border/60 align-top">
+      {props.children}
+    </th>
+  ),
+  td: (props: any) => (
+    <td className="px-3 py-2 border border-border/60 align-top whitespace-pre-wrap">
+      {props.children}
+    </td>
+  ),
+  h1: (props: any) => <h1 className="text-base font-semibold">{props.children}</h1>,
+  h2: (props: any) => <h2 className="text-sm font-semibold">{props.children}</h2>,
+  h3: (props: any) => <h3 className="text-sm font-semibold">{props.children}</h3>,
+  strong: (props: any) => <strong className="font-semibold">{props.children}</strong>,
+  em: (props: any) => <em className="italic">{props.children}</em>,
+}
+
+function parseTableToHtml(markdown: string): string {
+  if (!markdown || !markdown.includes("|")) {
+    return markdown
+  }
+
+  const lines = markdown.split("\n")
+  let html = ""
+  let inTable = false
+
+  for (const line of lines) {
+    const trimmedLine = line.trim()
+
+    if (trimmedLine.match(/^\s*\|?\s*-+\s*\|?\s*-+\s*\|?\s*-+\s*\|?\s*$/)) {
+      continue
+    }
+
+    if (trimmedLine.includes("|")) {
+      if (!inTable) {
+        html += '<table class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">\n'
+        html += '  <thead class="bg-gray-100">\n    <tr>\n'
+
+        const headers = trimmedLine.split("|").map((h) => h.trim()).filter(Boolean)
+        headers.forEach((header) => {
+          html += `      <th class="px-3 py-2 text-left font-semibold text-gray-700 border border-gray-300">${header}</th>\n`
+        })
+
+        html += "    </tr>\n  </thead>\n  <tbody>\n"
+        inTable = true
+        continue
+      }
+
+      const cells = trimmedLine.split("|").map((c) => c.trim()).filter(Boolean)
+      if (cells.length > 0) {
+        html += '    <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">\n'
+        cells.forEach((cell) => {
+          html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${cell}</td>\n`
+        })
+        html += "    </tr>\n"
+      }
+      continue
+    }
+
+    if (inTable) {
+      html += "  </tbody>\n</table>\n"
+      inTable = false
+    }
+
+    html += trimmedLine + "\n"
+  }
+
+  if (inTable) {
+    html += "  </tbody>\n</table>\n"
+  }
+
+  return html.trim()
 }
 
 export function CustomerChatPanel({ customerId, customerName, customerProfile, customerPreferences, wardrobeUploaded, outfitPlanCount }: CustomerChatPanelProps) {
@@ -276,15 +302,6 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
       const data = (await res.json()) as PlanResponse
 
       setLastPlan(data)
-
-      const aiMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data.preview,
-        createdAt: new Date().toISOString(),
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
     } catch (error) {
       console.error(error)
     } finally {
@@ -364,7 +381,12 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                                 : "max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-primary text-primary-foreground"
                             }
                           >
-                            <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(msg.content, true) }} />
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={markdownComponents}
+                            >
+                              {msg.role === "assistant" ? normalizeMarkdown(msg.content) : msg.content}
+                            </ReactMarkdown>
                           </div>
                         </div>
                       ))}
@@ -542,4 +564,3 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
     </>
   )
 }
-
