@@ -152,7 +152,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
         const contextMessage: ChatMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: `Customer context loaded:\n${customerProfile ? `Profile: ${JSON.stringify(customerProfile, null, 2)}` : ''}\n${customerPreferences ? `Preferences: ${JSON.stringify(customerPreferences, null, 2)}` : ''}\n${wardrobeUploaded !== undefined ? `Wardrobe uploaded: ${wardrobeUploaded ? 'Yes' : 'No'}` : ''}\n${outfitPlanCount !== undefined ? `Outfit plans: ${outfitPlanCount}` : ''}${wardrobeItems.length > 0 ? `\nWardrobe items: ${wardrobeItems.length}` : ''}`,
+          content: `Hey ${customerName || 'there'}! How may I style you today?`,
           createdAt: new Date().toISOString(),
         }
         setMessages([contextMessage])
@@ -379,7 +379,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                     <Textarea
                       value={input}
                       onChange={(event) => setInput(event.target.value)}
-                      placeholder="Type the question or summary from your phone conversation"
+                      
                       className="min-h-[80px] rounded-2xl"
                     />
                     <div className="flex justify-end">
@@ -454,12 +454,12 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Conversation notes
+                    Give Details about your Schedule/Itenary
                   </p>
                   <Textarea
                     value={planNotes}
                     onChange={(event) => setPlanNotes(event.target.value)}
-                    placeholder="Summarize the phone call including dates, occasion, locations, and preferences"
+                   
                     className="min-h-[120px] rounded-2xl"
                   />
                 </div>
@@ -488,8 +488,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        After generating a plan, you see a summary here and can download a PDF version or share it over
-                        WhatsApp.
+                        Get your Spin-Story Here
                       </p>
                     )}
                   </ScrollArea>
