@@ -12,9 +12,10 @@ type UploadState = "idle" | "preview" | "uploading" | "analyzing" | "success" | 
 
 interface UploadDropzoneProps {
   onUploadComplete?: (file: File) => void
+  customerId?: string
 }
 
-export function UploadDropzone({ onUploadComplete }: UploadDropzoneProps) {
+export function UploadDropzone({ onUploadComplete, customerId = 'demo-customer' }: UploadDropzoneProps) {
   const [state, setState] = useState<UploadState>("idle")
   const [isDragOver, setIsDragOver] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -56,29 +57,125 @@ export function UploadDropzone({ onUploadComplete }: UploadDropzoneProps) {
     [handleFile],
   )
 
-  const handleUpload = useCallback(() => {
+  const handleUpload = useCallback(async () => {
+    if (!selectedFile) return
+
     setState("uploading")
     setProgress(0)
 
-    // Simulate upload progress
-    const uploadInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(uploadInterval)
-          setState("analyzing")
-          // Simulate AI analysis
-          setTimeout(() => {
-            setState("success")
-            if (selectedFile) {
-              onUploadComplete?.(selectedFile)
-            }
-          }, 2000)
-          return 100
-        }
-        return prev + 20
+    try {
+      console.log('=== CLOUDINARY CLIENT: Starting upload process ===')
+      console.log('File details:', {
+        name: selectedFile.name,
+        type: selectedFile.type,
+        size: selectedFile.size,
+        customerId: customerId
       })
-    }, 300)
-  }, [selectedFile, onUploadComplete])
+
+      // Step 1: Convert image to base64 for AI analysis
+      console.log('=== CLOUDINARY CLIENT: Converting image to base64 ===')
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error('Failed to read image file'))
+        reader.readAsDataURL(selectedFile)
+      })
+      console.log('=== CLOUDINARY CLIENT: Base64 conversion successful ===')
+
+      // Step 2: Upload to Cloudinary
+      setProgress(30)
+      console.log('=== CLOUDINARY CLIENT: Preparing upload form data ===')
+      
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('customerId', customerId)
+      formData.append('fileName', selectedFile.name)
+      
+      console.log('=== CLOUDINARY CLIENT: Uploading to Cloudinary ===')
+      const uploadResponse = await fetch('/api/wardrobe/upload-cloudinary', {
+        method: 'POST',
+        body: formData,
+      })
+
+      console.log('=== CLOUDINARY CLIENT: Upload response received ===')
+      console.log('Response status:', uploadResponse.status)
+      console.log('Response status text:', uploadResponse.statusText)
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text()
+        console.error('=== CLOUDINARY CLIENT: Upload failed ===')
+        console.error('Error response body:', errorText)
+        throw new Error(`Cloudinary upload failed: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`)
+      }
+
+      const uploadData = await uploadResponse.json()
+      console.log('=== CLOUDINARY CLIENT: Upload successful ===')
+      console.log('Upload data:', uploadData)
+
+      if (!uploadData.success) {
+        throw new Error('Cloudinary upload was not successful')
+      }
+
+      const { url, publicId } = uploadData
+      setProgress(60)
+
+      // Step 3: Analyze with AI using base64 image data
+      console.log('=== CLOUDINARY CLIENT: Starting AI analysis ===')
+      const analysisResponse = await fetch('/api/ai/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageData: base64Image,
+          imageUrl: url, // Use Cloudinary URL for metadata
+          customerId: customerId
+        })
+      })
+
+      console.log('=== CLOUDINARY CLIENT: AI analysis response received ===')
+      console.log('Analysis response status:', analysisResponse.status)
+
+      if (!analysisResponse.ok) {
+        const errorText = await analysisResponse.text()
+        console.error('=== CLOUDINARY CLIENT: AI analysis failed ===')
+        console.error('Error response body:', errorText)
+        throw new Error(`AI analysis failed: ${analysisResponse.status} ${analysisResponse.statusText} - ${errorText}`)
+      }
+
+      setProgress(80)
+      const { data } = await analysisResponse.json()
+      console.log('=== CLOUDINARY CLIENT: AI analysis successful ===')
+      console.log('Analysis data:', data)
+
+      // Step 4: Save the analyzed item to wardrobe
+      console.log('=== CLOUDINARY CLIENT: Saving item to wardrobe ===')
+      const saveResponse = await fetch('/api/wardrobe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      console.log('=== CLOUDINARY CLIENT: Save response received ===')
+      console.log('Save response status:', saveResponse.status)
+
+      if (!saveResponse.ok) {
+        const errorText = await saveResponse.text()
+        console.warn('=== CLOUDINARY CLIENT: Failed to save item to wardrobe ===')
+        console.warn('Error response body:', errorText)
+        // Don't fail the upload if save fails, just warn
+      } else {
+        console.log('=== CLOUDINARY CLIENT: Item saved to wardrobe successfully ===')
+      }
+
+      setState("success")
+      if (selectedFile) {
+        onUploadComplete?.(selectedFile)
+      }
+
+    } catch (error) {
+      console.error('Upload/Analysis error:', error)
+      setState("error")
+    }
+  }, [selectedFile, onUploadComplete, customerId])
 
   const handleReset = useCallback(() => {
     setState("idle")

@@ -7,93 +7,95 @@ import { Check, Leaf, Snowflake, Sun } from "lucide-react"
 interface ClothingItem {
   id: string
   name: string
-  image: string
-  label: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  imageUrl: string
+  category: string
+  createdAt: Date
 }
 
-const sampleClothes: ClothingItem[] = [
+interface WardrobePreviewProps {
+  items?: ClothingItem[]
+}
+
+const defaultItems: ClothingItem[] = [
   {
     id: "1",
     name: "Denim Jacket",
-    image: "/classic-denim-jacket.png",
-    label: "2 Seasons",
-    icon: Snowflake,
+    imageUrl: "/classic-denim-jacket.png",
+    category: "outerwear",
+    createdAt: new Date(),
   },
   {
     id: "2",
     name: "Black Blazer",
-    image: "/black-blazer.jpg",
-    label: "Spring/Fall",
-    icon: Leaf,
+    imageUrl: "/black-blazer.jpg",
+    category: "outerwear",
+    createdAt: new Date(),
   },
   {
     id: "3",
     name: "Floral Midi Dress",
-    image: "/floral-dress.png",
-    label: "Summer",
-    icon: Sun,
+    imageUrl: "/floral-dress.png",
+    category: "dresses",
+    createdAt: new Date(),
   },
   {
     id: "4",
     name: "Leather Boots",
-    image: "/brown-leather-boots.png",
-    label: "Winter",
-    icon: Snowflake,
+    imageUrl: "/brown-leather-boots.png",
+    category: "shoes",
+    createdAt: new Date(),
   },
   {
     id: "5",
     name: "Denim Jeans",
-    image: "/denim-jeans.png",
-    label: "Everyday",
-    icon: Leaf,
-  },
-  {
-    id: "6",
-    name: "Green Crewneck Tee",
-    image: "/casual-tshirt.png",
-    label: "Summer",
-    icon: Sun,
+    imageUrl: "/denim-jeans.png",
+    category: "bottoms",
+    createdAt: new Date(),
   },
 ]
 
-export function WardrobePreview() {
+export function WardrobePreview({ items }: WardrobePreviewProps) {
+  const displayItems = items && items.length > 0 ? items.slice(0, 5) : defaultItems
+
   return (
-    <Card className="rounded-3xl py-2">
-      <CardHeader className="pb-0.5">
-        <CardTitle className="text-base font-semibold">Your Wardrobe</CardTitle>
+    <Card className="rounded-3xl">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold">Wardrobe Preview</CardTitle>
+        <Check className="h-4 w-4 text-primary" />
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-2 gap-2">
-          {sampleClothes.slice(0, 4).map((item) => {
-            const Icon = item.icon
-            return (
-              <Card
-                key={item.id}
-                className="relative flex flex-col rounded-3xl bg-card shadow-sm"
-              >
-                <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm">
-                  <Check className="h-3 w-3 text-emerald-500" />
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-5 gap-2">
+          {displayItems.map((item) => (
+            <div
+              key={item.id}
+              className="group relative aspect-square cursor-pointer overflow-hidden rounded-2xl border bg-muted transition-all hover:scale-105"
+            >
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-muted">
+                  <span className="text-2xl">👔</span>
                 </div>
-
-                <div className="mx-2.5 mt-1 mb-1 overflow-hidden rounded-2xl bg-muted">
-                  <img
-                    src={item.image || "/placeholder.svg"}
-                    alt={item.name}
-                    className="h-20 w-full object-cover"
-                  />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute bottom-2 left-2 text-white">
+                  <p className="text-xs font-medium">{item.name}</p>
+                  <p className="text-[10px] opacity-80">{item.category}</p>
                 </div>
-
-                <div className="px-2.5 pb-1">
-                  <p className="text-[12px] font-semibold tracking-tight">{item.name}</p>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Icon className="h-3 w-3" />
-                    <span>{item.label}</span>
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Sun className="h-3 w-3" />
+          <span>Spring/Summer</span>
+          <span className="mx-1">•</span>
+          <Leaf className="h-3 w-3" />
+          <span>Fall/Winter</span>
         </div>
       </CardContent>
     </Card>

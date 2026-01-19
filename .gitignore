@@ -24,4 +24,11 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts.env*
+next-env.d.ts
+
+# Firebase service account files
+firebase-service-account.json
+spin-story-firebase-adminsdk-*.json
+
+# Local development files
+.env*.local
