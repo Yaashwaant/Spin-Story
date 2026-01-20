@@ -170,6 +170,7 @@ export async function POST(req: NextRequest) {
             return {
               id: doc.id,
               name: data.name || '',
+              image: data.image || '',
               type: data.type || '',
               color: data.color || '',
               season: data.season || '',
@@ -230,6 +231,7 @@ IMPORTANT WARDROBE AWARENESS RULES:
 - If suggesting new purchases, explain why existing items aren't suitable
 - If no suitable items exist for a specific outfit, clearly state: "You don't currently have suitable items in your wardrobe for this outfit"
 - Reference specific wardrobe items by name and color when creating combinations
+- USE EXACT ITEM NAMES from the wardrobe list to ensure proper linking to item photos
 
 Be specific, practical, and consider the customer's profile, preferences, and existing wardrobe. Make sure the plan is actionable and easy to follow.
 

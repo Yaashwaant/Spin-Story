@@ -85,7 +85,7 @@ const markdownComponents = {
   em: (props: any) => <em className="italic">{props.children}</em>,
 }
 
-function parseTableToHtml(markdown: string): string {
+function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
   if (!markdown || !markdown.includes("|")) {
     return markdown
   }
@@ -93,6 +93,27 @@ function parseTableToHtml(markdown: string): string {
   const lines = markdown.split("\n")
   let html = ""
   let inTable = false
+
+  // Helper function to create clickable item links
+  const createItemLink = (text: string): string => {
+    // Look for wardrobe item names in the text
+    let modifiedText = text
+    
+    wardrobeItems.forEach(item => {
+      if (item.name && item.image) {
+        // Create a regex to match the item name (case insensitive)
+        const escapedName = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`\\b${escapedName}\\b`, 'gi')
+        
+        // Replace matches with clickable links
+        modifiedText = modifiedText.replace(regex, 
+          `<a href="${item.image}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-medium">${item.name}</a>`
+        )
+      }
+    })
+    
+    return modifiedText
+  }
 
   for (const line of lines) {
     const trimmedLine = line.trim()
@@ -120,7 +141,9 @@ function parseTableToHtml(markdown: string): string {
       if (cells.length > 0) {
         html += '    <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">\n'
         cells.forEach((cell) => {
-          html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${cell}</td>\n`
+          // Process cell content to add item links
+          const processedCell = createItemLink(cell)
+          html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${processedCell}</td>\n`
         })
         html += "    </tr>\n"
       }
@@ -505,7 +528,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                           Plan preview
                         </p>
                         <div className="text-sm text-foreground">
-                          <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(lastPlan.preview) }} />
+                          <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(lastPlan.preview, wardrobeItems) }} />
                         </div>
                       </div>
                     ) : (
