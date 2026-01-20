@@ -2,7 +2,27 @@ import { NextRequest, NextResponse } from "next/server"
 import puppeteer from "puppeteer"
 import { adminDb } from "@/lib/firebase-admin"
 
-// Function to parse markdown table to HTML
+// Helper function to create clickable item links in text
+function createItemLinks(text: string, wardrobeItems: WardrobeItem[]): string {
+  let modifiedText = text
+  
+  wardrobeItems.forEach(item => {
+    if (item.name && item.image) {
+      // Create a regex to match the item name (case insensitive)
+      const escapedName = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(`\\b${escapedName}\\b`, 'gi')
+      
+      // Replace matches with clickable links
+      modifiedText = modifiedText.replace(regex, 
+        `<a href="${item.image}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 500;">${item.name}</a>`
+      )
+    }
+  })
+  
+  return modifiedText
+}
+
+// Function to parse markdown table to HTML while preserving links
 function parseMarkdownTable(markdown: string): string {
   // Check if the content already contains HTML table tags
   if (markdown.includes('<table') && markdown.includes('</table>')) {
@@ -17,7 +37,7 @@ function parseMarkdownTable(markdown: string): string {
   const tableRows = lines.filter(line => line.includes('|') && line.trim().length > 0)
   
   if (tableRows.length === 0) {
-    // No table found, return the original content with basic formatting
+    // No table found, return the original content with basic formatting and preserve links
     return markdown
       .replace(/\n/g, '<br>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -47,6 +67,7 @@ function parseMarkdownTable(markdown: string): string {
     if (cells.length > 0) {
       html += '    <tr>\n'
       cells.forEach(cell => {
+        // Preserve HTML links in cells
         html += `      <td>${cell}</td>\n`
       })
       html += '    </tr>\n'
@@ -90,7 +111,18 @@ interface OutfitPlan {
   updatedAt: string
 }
 
-function generatePlanHTML(plan: OutfitPlan, customerName?: string): string {
+interface WardrobeItem {
+  id: string
+  name: string
+  image: string
+  type: string
+  color: string
+  season: string
+  styles: string[]
+  customerId: string
+}
+
+function generatePlanHTML(plan: OutfitPlan, customerName?: string, wardrobeItems: WardrobeItem[] = []): string {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -915,7 +947,7 @@ function generatePlanHTML(plan: OutfitPlan, customerName?: string): string {
         <div class="content">
           <!-- Table Content Only -->
           <div class="table-only-content">
-            ${parseMarkdownTable(plan.preview)}
+            ${parseMarkdownTable(createItemLinks(plan.preview, wardrobeItems))}
           </div>
         </div>
       </div>
@@ -943,11 +975,39 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     
     // Fetch customer information if available
     let customerName: string | undefined
+    let wardrobeItems: WardrobeItem[] = []
+    
     if (planData.customerId) {
       const customerDoc = await adminDb.collection('customers').doc(planData.customerId).get()
       if (customerDoc.exists) {
         const customerData = customerDoc.data()
         customerName = customerData?.name || customerData?.customerName
+      }
+      
+      // Fetch wardrobe items for the customer
+      try {
+        const wardrobeSnapshot = await adminDb
+          .collection('wardrobe')
+          .where('customerId', '==', planData.customerId)
+          .get()
+        
+        wardrobeItems = wardrobeSnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            name: data.name || '',
+            image: data.image || '',
+            type: data.type || '',
+            color: data.color || '',
+            season: data.season || '',
+            styles: data.styles || [],
+            customerId: data.customerId || '',
+          }
+        })
+        console.log(`Found ${wardrobeItems.length} wardrobe items for PDF generation`)
+      } catch (wardrobeError) {
+        console.error("Error fetching wardrobe items for PDF:", wardrobeError)
+        // Continue without wardrobe data if fetch fails
       }
     }
 
@@ -960,14 +1020,14 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const page = await browser.newPage()
     
     // Generate HTML content
-    const htmlContent = generatePlanHTML(planData, customerName)
+    const htmlContent = generatePlanHTML(planData, customerName, wardrobeItems)
     
     await page.setContent(htmlContent, { 
       waitUntil: 'networkidle0',
       timeout: 30000
     })
     
-    // Generate PDF
+    // Generate PDF with clickable links enabled
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -976,7 +1036,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
         right: '20px',
         bottom: '20px',
         left: '20px'
-      }
+      },
+      displayHeaderFooter: false,
+      preferCSSPageSize: true,
+      // Enable clickable links in PDF
+      outline: true,
+      tagged: true
     })
     
     await browser.close()
