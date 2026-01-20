@@ -13,10 +13,26 @@ interface BdrCustomerSummary {
   updatedAt: string
   profile?: Profile
   preferences?: Preferences
+  fullName?: string
+  phoneNumber?: string
 }
 
 export async function GET() {
   const snapshot = await adminDb.collection("users").limit(20).get()
+
+  // Debug: Log the actual data structure
+  if (!snapshot.empty) {
+    console.log(`Found ${snapshot.size} users in database`)
+    snapshot.forEach((doc) => {
+      const data = doc.data()
+      console.log(`User ${doc.id}:`, {
+        name: data.name,
+        contactNumber: data.contactNumber,
+        hasProfile: !!data.profile,
+        hasPreferences: !!data.preferences
+      })
+    })
+  }
 
   if (snapshot.empty) {
     const now = new Date()
@@ -30,17 +46,22 @@ export async function GET() {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         profile: {
-          height: "average",
-          physique: "slim",
-          skinTone: "wheatish",
+          height: 170,
+          weight: 65,
           hairColor: "Black",
           fullBodyPhotoUrl: "https://example.com/demo1-full.jpg",
           facePhotoUrl: "https://example.com/demo1-face.jpg",
           wearsMost: ["Tops", "Bottoms"],
-          fitPreference: "regular",
+          fitPreference: ["regular"],
           colorComfort: "neutral",
-          dressingPurpose: "work",
           avoids: ["sleeveless"],
+          gender: "female",
+          age: 25,
+          aiExtractedTraits: {
+            physique: "slim",
+            skinTone: "wheatish",
+            dressingPurpose: "work"
+          }
         },
         preferences: {
           budgetMin: 500,
@@ -57,17 +78,22 @@ export async function GET() {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         profile: {
-          height: "tall",
-          physique: "athletic",
-          skinTone: "medium",
+          height: 185,
+          weight: 75,
           hairColor: "Brown",
           fullBodyPhotoUrl: "https://example.com/demo2-full.jpg",
           facePhotoUrl: "https://example.com/demo2-face.jpg",
           wearsMost: ["Dresses", "Accessories"],
-          fitPreference: "slim",
+          fitPreference: ["slim"],
           colorComfort: "bold",
-          dressingPurpose: "party",
           avoids: ["stripes"],
+          gender: "female",
+          age: 28,
+          aiExtractedTraits: {
+            physique: "athletic",
+            skinTone: "medium",
+            dressingPurpose: "party"
+          }
         },
         preferences: {
           budgetMin: 1000,
@@ -84,17 +110,22 @@ export async function GET() {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         profile: {
-          height: "short",
-          physique: "average",
-          skinTone: "fair",
+          height: 160,
+          weight: 60,
           hairColor: "Blonde",
           fullBodyPhotoUrl: "https://example.com/demo3-full.jpg",
           facePhotoUrl: "https://example.com/demo3-face.jpg",
           wearsMost: ["Tops", "Dresses"],
-          fitPreference: "loose",
+          fitPreference: ["loose"],
           colorComfort: "pastel",
-          dressingPurpose: "casual",
           avoids: ["polka dots"],
+          gender: "female",
+          age: 22,
+          aiExtractedTraits: {
+            physique: "average",
+            skinTone: "fair",
+            dressingPurpose: "casual"
+          }
         },
         preferences: {
           budgetMin: 300,
@@ -130,7 +161,9 @@ export async function GET() {
   const customers: BdrCustomerSummary[] = afterSeedSnapshot.docs.map((doc) => {
     const data = doc.data() as {
       name?: string
+      fullName?: string
       contactNumber?: string
+      phoneNumber?: string
       wardrobeUploaded?: boolean
       outfitPlanCount?: number
       isDemo?: boolean
@@ -154,10 +187,23 @@ export async function GET() {
           ? data.updatedAt
           : ""
 
+    // Try to get a meaningful name from multiple sources
+    let customerName = data.name || data.fullName || ""
+    
+    // If no name is found, create one from contact info
+    if (!customerName || customerName === "Unknown user") {
+      const contact = data.contactNumber || data.phoneNumber || ""
+      if (contact) {
+        customerName = `Customer ${contact.slice(-4)}`
+      } else {
+        customerName = `Customer ${doc.id.slice(-4)}`
+      }
+    }
+
     return {
       id: doc.id,
-      name: data.name ?? "Unknown user",
-      contactNumber: data.contactNumber ?? "",
+      name: customerName,
+      contactNumber: data.contactNumber || data.phoneNumber || "",
       wardrobeUploaded: data.wardrobeUploaded ?? false,
       outfitPlanCount: data.outfitPlanCount ?? 0,
       isDemo: data.isDemo ?? false,

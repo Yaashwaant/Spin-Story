@@ -21,6 +21,8 @@ interface BdrCustomerSummary {
   updatedAt: string
   profile?: any
   preferences?: any
+  fullName?: string
+  phoneNumber?: string
 }
 
 export default function BdrDashboardPage() {
