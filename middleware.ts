@@ -1,24 +1,49 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/onboarding", "/wardrobe", "/recommend", "/shop"];
-const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
+// Define routes that are accessible without authentication
+const publicRoutes = [
+  "/login", 
+  "/signup", 
+  "/forgot-password", 
+  "/reset-password",
+  "/bdr/login"
+];
+
+// Define BDR-specific routes
+const bdrRoutes = ["/bdr", "/bdr/dashboard", "/bdr/customers"];
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("auth-token")?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
+  // Check if the current path is a public route
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isBdrRoute = bdrRoutes.some(route => pathname.startsWith(route));
 
-  // If trying to access protected routes without token, redirect to login
-  if (isProtectedRoute && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // If user is NOT authenticated
+  if (!token) {
+    // If trying to access a non-public route, redirect to login
+    if (!isPublicRoute) {
+      // Special handling for BDR routes - redirect to BDR login instead of regular login
+      if (isBdrRoute) {
+        return NextResponse.redirect(new URL("/bdr/login", request.url));
+      }
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
   }
 
-  // If trying to access auth routes with token, redirect to dashboard
-  if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // If user IS authenticated
+  if (token) {
+    // If trying to access regular public auth routes (like login/signup), redirect to dashboard
+    if (isPublicRoute && !pathname.startsWith("/bdr")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    
+    // If trying to access BDR login while authenticated, redirect to BDR dashboard
+    if (pathname === "/bdr/login") {
+      return NextResponse.redirect(new URL("/bdr", request.url));
+    }
   }
 
   return NextResponse.next();
@@ -26,6 +51,14 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public assets like images in public folder
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp)$).*)",
   ],
 };

@@ -1,13 +1,23 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
-import { Home } from "lucide-react"
+import { Home, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/components/auth/auth-provider"
+import { Button } from "@/components/ui/button"
 
 export function BdrNavbar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { signOut } = useAuth()
   const isBdrPage = pathname?.startsWith("/bdr")
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/bdr/login")
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
@@ -35,6 +45,15 @@ export function BdrNavbar() {
               )}
             />
           </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-slate-900"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
         </nav>
       </div>
     </header>
