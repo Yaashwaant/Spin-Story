@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -54,6 +55,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
@@ -109,6 +111,11 @@ export default function LoginPage() {
               Don't have an account?{" "}
               <a href="/signup" className="text-primary hover:underline">
                 Sign up
+              </a>
+            </div>
+            <div className="mt-2 text-center text-sm">
+              <a href="/bdr/login" className="text-primary hover:underline">
+                BDR Login
               </a>
             </div>
           </CardContent>

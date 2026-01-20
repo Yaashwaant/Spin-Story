@@ -42,10 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user);
         
         // Check if user needs onboarding
-        if (!data.user.onboarded && pathname !== "/onboarding") {
+        // Allow BDR routes to be accessible even if not onboarded
+        if (!data.user.onboarded && pathname !== "/onboarding" && !pathname?.startsWith("/bdr")) {
           router.push("/onboarding");
         }
       } else {
+        // If the token is invalid/expired (401) or user not found (404), clear the session
+        // to prevent infinite redirects with middleware
+        if (response.status === 401 || response.status === 404 || response.status === 403) {
+          await fetch("/api/auth/logout", { method: "POST" });
+        }
         setUser(null);
       }
     } catch (error) {

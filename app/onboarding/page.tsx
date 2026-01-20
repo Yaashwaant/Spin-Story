@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { uploadProfilePhoto } from "@/lib/upload-profile-photo";
+import { uploadProfilePhoto, compressImage } from "@/lib/upload-profile-photo";
 import { profileSchema, preferencesSchema, type Profile, type Preferences } from "@/models/user";
 
 const wearsMostOptions = ["Tops", "Bottoms", "Ethnic", "Western", "Sportswear"];
@@ -17,24 +17,32 @@ const colorComfortOptions = ["neutral", "pastel", "bold"];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isLoading } = useAuth();
   const [profile, setProfile] = useState<Partial<Profile>>({});
   const [preferences, setPreferences] = useState<Partial<Preferences>>({ currency: "INR" });
-  const [file, setFile] = useState<File | null>(null);
+  const [faceFile, setFaceFile] = useState<File | null>(null);
+  const [bodyFile, setBodyFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Handle redirect logic properly
   useEffect(() => {
-    if (user?.onboarded && !isRedirecting) {
+    if (isLoading) return;
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (user.onboarded && !isRedirecting) {
       setIsRedirecting(true);
       router.push("/dashboard");
     }
-  }, [user?.onboarded, router, isRedirecting]);
+  }, [user, isLoading, router, isRedirecting]);
 
-  // Don't render anything if user is already onboarded or redirecting
-  if (user?.onboarded || isRedirecting) {
+  // Don't render anything if loading, not authenticated, already onboarded or redirecting
+  if (isLoading || !user || (user?.onboarded) || isRedirecting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -50,17 +58,33 @@ export default function OnboardingPage() {
     
     // Check required fields
     if (!profile.height) newErrors.height = "Height is required";
-    if (!profile.physique) newErrors.physique = "Physique is required";
-    if (!profile.skinTone) newErrors.skinTone = "Skin tone is required";
+    if (!profile.weight) newErrors.weight = "Weight is required";
     if (!profile.hairColor) newErrors.hairColor = "Hair color is required";
+    if (!profile.gender) newErrors.gender = "Gender is required";
+    if (!profile.age) newErrors.age = "Age is required";
+    if (profile.age && (profile.age < 13 || profile.age > 100)) newErrors.age = "Age must be between 13 and 100";
     if (!profile.wearsMost || profile.wearsMost.length === 0) newErrors.wearsMost = "Please select at least one option";
-    if (!profile.fitPreference) newErrors.fitPreference = "Fit preference is required";
+    if (!profile.fitPreference || profile.fitPreference.length === 0) newErrors.fitPreference = "Fit preference is required";
     if (!profile.colorComfort) newErrors.colorComfort = "Color comfort is required";
-    if (!profile.dressingPurpose) newErrors.dressingPurpose = "Dressing purpose is required";
     if (!preferences.budgetMin || !preferences.budgetMax) newErrors.budget = "Budget range is required";
     
+    if (!faceFile) newErrors.facePhoto = "Face photo is required for AI analysis";
+    if (!bodyFile) newErrors.bodyPhoto = "Full body photo is required for AI analysis";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // FileReader result includes "data:image/jpeg;base64," prefix which we want to keep
+        resolve(reader.result as string);
+      };
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const handleSave = async () => {
@@ -71,6 +95,52 @@ export default function OnboardingPage() {
       }
       
       setSubmitting(true);
+
+      // Analyze photos with AI
+      let aiTraits = {};
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for analysis
+
+        // Convert files to base64
+        let faceBase64 = "";
+        let bodyBase64 = "";
+
+        // Compress images before converting to base64 to avoid huge payloads
+        if (faceFile) {
+          const compressedFace = await compressImage(faceFile);
+          faceBase64 = await fileToBase64(compressedFace);
+        }
+        if (bodyFile) {
+          const compressedBody = await compressImage(bodyFile);
+          bodyBase64 = await fileToBase64(compressedBody);
+        }
+
+        const aiResponse = await fetch("/api/ai/analyze-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ facePhoto: faceBase64, fullBodyPhoto: bodyBase64 }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          if (aiData.success && aiData.traits) {
+            aiTraits = aiData.traits;
+          } else {
+            throw new Error("AI analysis returned invalid data");
+          }
+        } else {
+          throw new Error("AI analysis failed");
+        }
+      } catch (aiError) {
+        console.error("AI analysis failed or timed out:", aiError);
+        alert("Failed to analyze photos. Please upload clearer photos and try again.");
+        setSubmitting(false);
+        return; // Stop execution, don't save profile
+      }
       
       // Clean up the data - remove undefined values
       const cleanProfile = Object.fromEntries(
@@ -78,18 +148,14 @@ export default function OnboardingPage() {
       );
       
       const cleanPreferences = Object.fromEntries(
-        Object.entries(preferences).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        Object.entries(preferences).filter(([_, v]) => v !== undefined && v !== null && (v as any) !== '')
       );
 
-      // Validate the cleaned data
-      const parsedProfile = profileSchema.parse(cleanProfile);
-      const parsedPrefs = preferencesSchema.parse(cleanPreferences);
-
-      // Handle file upload if provided
-      if (file) {
-        const url = await uploadProfilePhoto(file);
-        parsedProfile.facePhotoUrl = url;
-      }
+      // Prepare final profile object - We DO NOT store the image URLs anymore as requested
+      const finalProfile = {
+        ...cleanProfile,
+        aiExtractedTraits: aiTraits,
+      };
 
       // Submit to API
       const response = await fetch("/api/onboarding", {
@@ -97,8 +163,8 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ 
-          profile: parsedProfile, 
-          preferences: parsedPrefs 
+          profile: finalProfile, 
+          preferences: cleanPreferences 
         }),
       });
 
@@ -130,67 +196,86 @@ export default function OnboardingPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Height */}
-            <div>
-              <Label>Height</Label>
-              <RadioGroup
-                value={profile.height || ""}
-                onValueChange={(v) => {
-                  setProfile({ ...profile, height: v as any });
-                  setErrors({ ...errors, height: "" });
-                }}
-                className="grid grid-cols-3 gap-2 mt-2"
-              >
-                {["short", "average", "tall"].map((h) => (
-                  <div key={h} className="flex items-center space-x-2">
-                    <RadioGroupItem value={h} id={h} />
-                    <Label htmlFor={h} className="capitalize cursor-pointer">{h}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {errors.height && <p className="text-xs text-destructive mt-1">{errors.height}</p>}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Height */}
+              <div>
+                <Label>Height (cm)</Label>
+                <input
+                  type="number"
+                  placeholder="e.g. 175"
+                  min="50"
+                  max="300"
+                  value={profile.height || ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : undefined;
+                    setProfile({ ...profile, height: val });
+                    setErrors({ ...errors, height: "" });
+                  }}
+                  className="mt-2 w-full border rounded px-3 py-2"
+                />
+                {errors.height && <p className="text-xs text-destructive mt-1">{errors.height}</p>}
+              </div>
+
+              {/* Weight */}
+              <div>
+                <Label>Weight (kg)</Label>
+                <input
+                  type="number"
+                  placeholder="e.g. 70"
+                  min="20"
+                  max="300"
+                  value={profile.weight || ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : undefined;
+                    setProfile({ ...profile, weight: val });
+                    setErrors({ ...errors, weight: "" });
+                  }}
+                  className="mt-2 w-full border rounded px-3 py-2"
+                />
+                {errors.weight && <p className="text-xs text-destructive mt-1">{errors.weight}</p>}
+              </div>
             </div>
 
-            {/* Physique */}
-            <div>
-              <Label>Physique</Label>
-              <RadioGroup
-                value={profile.physique || ""}
-                onValueChange={(v) => {
-                  setProfile({ ...profile, physique: v as any });
-                  setErrors({ ...errors, physique: "" });
-                }}
-                className="grid grid-cols-3 gap-2 mt-2"
-              >
-                {["slim", "average", "athletic", "broad", "heavy"].map((p) => (
-                  <div key={p} className="flex items-center space-x-2">
-                    <RadioGroupItem value={p} id={p} />
-                    <Label htmlFor={p} className="capitalize cursor-pointer">{p}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {errors.physique && <p className="text-xs text-destructive mt-1">{errors.physique}</p>}
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+               {/* Age */}
+               <div>
+                <Label>Age</Label>
+                <input
+                  type="number"
+                  placeholder="Age"
+                  min="13"
+                  max="100"
+                  value={profile.age || ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : undefined;
+                    setProfile({ ...profile, age: val });
+                    setErrors({ ...errors, age: "" });
+                  }}
+                  className="mt-2 w-full border rounded px-3 py-2"
+                />
+                {errors.age && <p className="text-xs text-destructive mt-1">{errors.age}</p>}
+              </div>
 
-            {/* Skin Tone */}
-            <div>
-              <Label>Skin Tone</Label>
-              <RadioGroup
-                value={profile.skinTone || ""}
-                onValueChange={(v) => {
-                  setProfile({ ...profile, skinTone: v as any });
-                  setErrors({ ...errors, skinTone: "" });
-                }}
-                className="grid grid-cols-4 gap-2 mt-2"
-              >
-                {["fair", "medium", "wheatish", "dark"].map((s) => (
-                  <div key={s} className="flex items-center space-x-2">
-                    <RadioGroupItem value={s} id={s} />
-                    <Label htmlFor={s} className="capitalize cursor-pointer">{s}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {errors.skinTone && <p className="text-xs text-destructive mt-1">{errors.skinTone}</p>}
+              {/* Gender */}
+              <div>
+                <Label>Gender</Label>
+                <RadioGroup
+                  value={profile.gender || ""}
+                  onValueChange={(v) => {
+                    setProfile({ ...profile, gender: v as any });
+                    setErrors({ ...errors, gender: "" });
+                  }}
+                  className="flex gap-4 mt-3"
+                >
+                  {["male", "female", "other"].map((g) => (
+                    <div key={g} className="flex items-center space-x-2">
+                      <RadioGroupItem value={g} id={g} />
+                      <Label htmlFor={g} className="capitalize cursor-pointer">{g}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {errors.gender && <p className="text-xs text-destructive mt-1">{errors.gender}</p>}
+              </div>
             </div>
 
             {/* Hair Color */}
@@ -232,24 +317,27 @@ export default function OnboardingPage() {
               {errors.wearsMost && <p className="text-xs text-destructive mt-1">{errors.wearsMost}</p>}
             </div>
 
-            {/* Fit Preference */}
+            {/* Fit Preference (Multi-select) */}
             <div>
-              <Label>Fit Preference</Label>
-              <RadioGroup
-                value={profile.fitPreference || ""}
-                onValueChange={(v) => {
-                  setProfile({ ...profile, fitPreference: v as any });
-                  setErrors({ ...errors, fitPreference: "" });
-                }}
-                className="grid grid-cols-3 gap-2 mt-2"
-              >
+              <Label>Fit Preference (multi-select)</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
                 {["slim", "regular", "loose"].map((f) => (
                   <div key={f} className="flex items-center space-x-2">
-                    <RadioGroupItem value={f} id={f} />
-                    <Label htmlFor={f} className="capitalize cursor-pointer">{f}</Label>
+                    <Checkbox
+                      checked={profile.fitPreference?.includes(f) || false}
+                      onCheckedChange={(checked) => {
+                        const list = profile.fitPreference || [];
+                        const newList = checked
+                          ? [...list, f]
+                          : list.filter((i) => i !== f);
+                        setProfile({ ...profile, fitPreference: newList });
+                        setErrors({ ...errors, fitPreference: "" });
+                      }}
+                    />
+                    <Label className="capitalize cursor-pointer">{f}</Label>
                   </div>
                 ))}
-              </RadioGroup>
+              </div>
               {errors.fitPreference && <p className="text-xs text-destructive mt-1">{errors.fitPreference}</p>}
             </div>
 
@@ -272,27 +360,6 @@ export default function OnboardingPage() {
                 ))}
               </RadioGroup>
               {errors.colorComfort && <p className="text-xs text-destructive mt-1">{errors.colorComfort}</p>}
-            </div>
-
-            {/* Dressing Purpose */}
-            <div>
-              <Label>Main Dressing Purpose</Label>
-              <RadioGroup
-                value={profile.dressingPurpose || ""}
-                onValueChange={(v) => {
-                  setProfile({ ...profile, dressingPurpose: v as any });
-                  setErrors({ ...errors, dressingPurpose: "" });
-                }}
-                className="grid grid-cols-3 gap-2 mt-2"
-              >
-                {dressingPurposeOptions.map((p) => (
-                  <div key={p} className="flex items-center space-x-2">
-                    <RadioGroupItem value={p} id={p} />
-                    <Label htmlFor={p} className="capitalize cursor-pointer">{p}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {errors.dressingPurpose && <p className="text-xs text-destructive mt-1">{errors.dressingPurpose}</p>}
             </div>
 
             {/* Avoids */}
@@ -336,20 +403,56 @@ export default function OnboardingPage() {
               {errors.budget && <p className="text-xs text-destructive mt-1">{errors.budget}</p>}
             </div>
 
-            {/* Photo Upload */}
-            <div>
-              <Label>Profile Photo (optional)</Label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="mt-2"
-              />
+            {/* Photo Uploads */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-xl bg-slate-50">
+              <div>
+                <Label className="block mb-2 font-medium">Face Photo (Required)</Label>
+                <p className="text-xs text-muted-foreground mb-3">Clear photo of your face for skin tone and features analysis.</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setFaceFile(e.target.files[0]);
+                        setErrors({ ...errors, facePhoto: "" });
+                      }
+                    }}
+                    className="w-full text-sm"
+                  />
+                  {faceFile && <span className="text-green-600 text-xs">✓ Selected</span>}
+                </div>
+                {errors.facePhoto && <p className="text-xs text-destructive mt-1">{errors.facePhoto}</p>}
+              </div>
+
+              <div>
+                <Label className="block mb-2 font-medium">Full Body Photo (Required)</Label>
+                <p className="text-xs text-muted-foreground mb-3">Full length photo to analyze body shape and proportions.</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setBodyFile(e.target.files[0]);
+                        setErrors({ ...errors, bodyPhoto: "" });
+                      }
+                    }}
+                    className="w-full text-sm"
+                  />
+                  {bodyFile && <span className="text-green-600 text-xs">✓ Selected</span>}
+                </div>
+                {errors.bodyPhoto && <p className="text-xs text-destructive mt-1">{errors.bodyPhoto}</p>}
+              </div>
+              
+              <div className="col-span-1 md:col-span-2 text-center text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                We use AI to analyze these photos to automatically determine your body type, skin tone, and style essence.
+              </div>
             </div>
 
             {/* Submit */}
-            <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl">
-              {submitting ? "Saving..." : "Complete Profile"}
+            <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
+              {submitting ? "Analyzing & Saving Profile..." : "Complete Profile"}
             </Button>
           </CardContent>
         </Card>

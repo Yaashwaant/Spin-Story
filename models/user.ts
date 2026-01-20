@@ -1,17 +1,18 @@
 import { z } from "zod";
 
 export const profileSchema = z.object({
-  height: z.enum(["short", "average", "tall"]).optional(),
-  physique: z.enum(["slim", "average", "athletic", "broad", "heavy"]).optional(),
-  skinTone: z.enum(["fair", "medium", "wheatish", "dark"]).optional(),
+  height: z.number().min(50).max(300).optional(), // Height in cm
+  weight: z.number().min(20).max(300).optional(), // Weight in kg
   hairColor: z.string().min(1).optional(),
   fullBodyPhotoUrl: z.string().url().optional(),
   facePhotoUrl: z.string().url().optional(),
   wearsMost: z.array(z.string()).min(1).optional(),
-  fitPreference: z.enum(["slim", "regular", "loose"]).optional(),
+  fitPreference: z.array(z.string()).optional(), // Changed to array (multi-select)
   colorComfort: z.enum(["neutral", "pastel", "bold"]).optional(),
-  dressingPurpose: z.enum(["work", "casual", "party", "travel", "wedding"]).optional(),
   avoids: z.array(z.string()).optional(),
+  gender: z.enum(["male", "female", "other", "prefer not to say"]).optional(),
+  age: z.number().int().min(13).max(100).optional(),
+  aiExtractedTraits: z.record(z.string(), z.any()).optional(), // For AI extracted personality/physique/skinTone
 });
 
 export const preferencesSchema = z.object({
