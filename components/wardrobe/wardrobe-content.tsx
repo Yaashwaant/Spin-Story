@@ -18,6 +18,11 @@ export function WardrobeContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const customerId = user?.id || "demo-customer"
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [filters, setFilters] = useState<{
+    categories: string[]
+    styles: string[]
+    seasons: string[]
+  }>({ categories: [], styles: [], seasons: [] })
 
   // Fetch wardrobe items from API
   const fetchWardrobeItems = useCallback(async () => {
@@ -60,17 +65,31 @@ export function WardrobeContent() {
   }
 
   const filteredWardrobe = wardrobe.filter(
-    (item) =>
-      item.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      item.type.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      item.color.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
+    (item) => {
+      // Search query filter
+      const matchesSearch = 
+        item.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        item.type.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        item.color.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      
+      // Category filter
+      const matchesCategory = filters.categories.length === 0 || filters.categories.includes(item.type)
+      
+      // Style filter
+      const matchesStyle = filters.styles.length === 0 || item.styles.some(style => filters.styles.includes(style))
+      
+      // Season filter
+      const matchesSeason = filters.seasons.length === 0 || filters.seasons.includes(item.season)
+      
+      return matchesSearch && matchesCategory && matchesStyle && matchesSeason
+    }
   )
 
   return (
     <div className="grid gap-8 lg:grid-cols-4">
       {/* Left Sidebar - Filters */}
       <div className="lg:col-span-1">
-        <FilterSidebar />
+        <FilterSidebar onFiltersChange={setFilters} />
       </div>
 
       {/* Main Content */}

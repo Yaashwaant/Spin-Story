@@ -2,11 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 
 const categories = [
@@ -33,11 +32,18 @@ const seasons = [
   { id: "winter", label: "Winter" },
 ]
 
-export function FilterSidebar() {
+interface FilterSidebarProps {
+  onFiltersChange?: (filters: {
+    categories: string[]
+    styles: string[]
+    seasons: string[]
+  }) => void
+}
+
+export function FilterSidebar({ onFiltersChange }: FilterSidebarProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedStyles, setSelectedStyles] = useState<string[]>([])
   const [selectedSeasons, setSelectedSeasons] = useState<string[]>([])
-  const [budgetRange, setBudgetRange] = useState([0, 200])
 
   const toggleFilter = (
     id: string,
@@ -46,6 +52,17 @@ export function FilterSidebar() {
   ) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
+
+  // Notify parent component when filters change
+  useEffect(() => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        categories: selectedCategories,
+        styles: selectedStyles,
+        seasons: selectedSeasons,
+      })
+    }
+  }, [selectedCategories, selectedStyles, selectedSeasons, onFiltersChange])
 
   return (
     <Card className="sticky top-24 rounded-2xl border-border/50 shadow-sm">
@@ -72,17 +89,7 @@ export function FilterSidebar() {
           </div>
         </div>
 
-        {/* Budget Filter */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-foreground">Budget</h4>
-          <div className="px-1">
-            <Slider value={budgetRange} onValueChange={setBudgetRange} min={0} max={500} step={10} className="w-full" />
-            <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-              <span>${budgetRange[0]}</span>
-              <span>${budgetRange[1]}+</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Style Filter */}
         <div className="space-y-3">
