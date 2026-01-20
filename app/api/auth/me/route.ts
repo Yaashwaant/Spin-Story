@@ -86,12 +86,19 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { fullName, email, phoneNumber } = body;
+    const { fullName, email, phoneNumber, profile } = body;
 
     // Validate input
-    if (!fullName || !email) {
+    if (fullName && !email) {
       return NextResponse.json(
-        { error: "Full name and email are required" },
+        { error: "Email is required when updating name" },
+        { status: 400 }
+      );
+    }
+
+    if (email && !fullName) {
+      return NextResponse.json(
+        { error: "Full name is required when updating email" },
         { status: 400 }
       );
     }
@@ -101,6 +108,7 @@ export async function PUT(req: NextRequest) {
     if (fullName) updateData.fullName = fullName;
     if (email) updateData.email = email;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (profile) updateData.profile = profile;
 
     const updatedUser = await updateUser(decoded.id, updateData);
 
