@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreVertical, Eye, Trash2 } from "lucide-react"
+import { MoreVertical, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface ClothingItemData {
@@ -19,24 +19,14 @@ export interface ClothingItemData {
 
 interface ClothingCardProps {
   item: ClothingItemData
-  onView?: (id: string) => void
   onRemove?: (id: string) => void
 }
 
-export function ClothingCard({ item, onView, onRemove }: ClothingCardProps) {
+export function ClothingCard({ item, onRemove }: ClothingCardProps) {
   return (
     <Card className="group relative overflow-hidden rounded-2xl border-border/50 bg-card transition-all hover:shadow-lg">
       {/* Hover Overlay */}
       <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="h-8 gap-1.5 rounded-lg bg-white/90 text-xs hover:bg-white"
-          onClick={() => onView?.(item.id)}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          View Details
-        </Button>
         <Button
           size="sm"
           variant="secondary"
@@ -68,10 +58,6 @@ export function ClothingCard({ item, onView, onRemove }: ClothingCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView?.(item.id)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={() => onRemove?.(item.id)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Remove Item

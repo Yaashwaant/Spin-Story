@@ -89,3 +89,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to add wardrobe item" }, { status: 500 })
   }
 }
+
+// DELETE: Remove a wardrobe item
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const customerId = searchParams.get("customerId")
+    const itemId = searchParams.get("itemId")
+
+    if (!customerId || !itemId) {
+      return NextResponse.json({ error: "Customer ID and item ID are required" }, { status: 400 })
+    }
+
+    const docRef = adminDb.collection("wardrobe").doc(itemId)
+    const doc = await docRef.get()
+
+    if (!doc.exists) {
+      return NextResponse.json({ error: "Wardrobe item not found" }, { status: 404 })
+    }
+
+    const data = doc.data()
+    if (data?.customerId !== customerId) {
+      return NextResponse.json({ error: "Not authorized to remove this item" }, { status: 403 })
+    }
+
+    await docRef.delete()
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error removing wardrobe item:", error)
+    return NextResponse.json({ error: "Failed to remove wardrobe item" }, { status: 500 })
+  }
+}

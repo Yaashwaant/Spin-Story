@@ -60,9 +60,26 @@ export function WardrobeContent() {
     fetchWardrobeItems()
   }, [fetchWardrobeItems])
 
-  const handleRemoveItem = (id: string) => {
-    setWardrobe((prev) => prev.filter((item) => item.id !== id))
-  }
+  const handleRemoveItem = useCallback(
+    async (id: string) => {
+      try {
+        const response = await fetch(`/api/wardrobe?customerId=${customerId}&itemId=${id}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to remove item")
+        }
+
+        setWardrobe((prev) => prev.filter((item) => item.id !== id))
+      } catch (error) {
+        console.error("Failed to remove wardrobe item:", error)
+        alert(error instanceof Error ? error.message : "Failed to remove item. Please try again.")
+      }
+    },
+    [customerId],
+  )
 
   const filteredWardrobe = wardrobe.filter(
     (item) => {
