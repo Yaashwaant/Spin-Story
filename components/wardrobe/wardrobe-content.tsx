@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { ClothingCard, type ClothingItemData } from "@/components/wardrobe/clothing-card"
 import { UploadDropzone } from "@/components/wardrobe/upload-dropzone"
 import { FilterSidebar } from "@/components/wardrobe/filter-sidebar"
@@ -23,6 +23,66 @@ export function WardrobeContent() {
     styles: string[]
     seasons: string[]
   }>({ categories: [], styles: [], seasons: [] })
+
+  const normalize = useCallback((value: string) => value.trim().toLowerCase(), [])
+
+  const toLabel = useCallback((value: string) => {
+    const cleaned = value.trim().replace(/[_-]+/g, " ")
+    return cleaned.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+  }, [])
+
+  const categoryOptions = useMemo(() => {
+    const counts = new Map<string, { raw: string; count: number }>()
+    for (const item of wardrobe) {
+      if (!item.type) continue
+      const id = normalize(item.type)
+      const existing = counts.get(id)
+      if (existing) {
+        existing.count += 1
+      } else {
+        counts.set(id, { raw: item.type, count: 1 })
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+      .map(([id, meta]) => ({ id, label: toLabel(meta.raw) }))
+  }, [normalize, toLabel, wardrobe])
+
+  const styleOptions = useMemo(() => {
+    const counts = new Map<string, { raw: string; count: number }>()
+    for (const item of wardrobe) {
+      for (const style of item.styles || []) {
+        if (!style) continue
+        const id = normalize(style)
+        const existing = counts.get(id)
+        if (existing) {
+          existing.count += 1
+        } else {
+          counts.set(id, { raw: style, count: 1 })
+        }
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+      .map(([id, meta]) => ({ id, label: toLabel(meta.raw) }))
+  }, [normalize, toLabel, wardrobe])
+
+  const seasonOptions = useMemo(() => {
+    const counts = new Map<string, { raw: string; count: number }>()
+    for (const item of wardrobe) {
+      if (!item.season) continue
+      const id = normalize(item.season)
+      const existing = counts.get(id)
+      if (existing) {
+        existing.count += 1
+      } else {
+        counts.set(id, { raw: item.season, count: 1 })
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+      .map(([id, meta]) => ({ id, label: toLabel(meta.raw) }))
+  }, [normalize, toLabel, wardrobe])
 
   // Fetch wardrobe items from API
   const fetchWardrobeItems = useCallback(async () => {
@@ -90,13 +150,14 @@ export function WardrobeContent() {
         item.color.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
       
       // Category filter
-      const matchesCategory = filters.categories.length === 0 || filters.categories.includes(item.type)
+      const matchesCategory = filters.categories.length === 0 || filters.categories.includes(normalize(item.type))
       
       // Style filter
-      const matchesStyle = filters.styles.length === 0 || item.styles.some(style => filters.styles.includes(style))
+      const matchesStyle =
+        filters.styles.length === 0 || item.styles.some((style) => filters.styles.includes(normalize(style)))
       
       // Season filter
-      const matchesSeason = filters.seasons.length === 0 || filters.seasons.includes(item.season)
+      const matchesSeason = filters.seasons.length === 0 || filters.seasons.includes(normalize(item.season))
       
       return matchesSearch && matchesCategory && matchesStyle && matchesSeason
     }
@@ -106,7 +167,12 @@ export function WardrobeContent() {
     <div className="grid gap-8 lg:grid-cols-4">
       {/* Left Sidebar - Filters */}
       <div className="lg:col-span-1">
-        <FilterSidebar onFiltersChange={setFilters} />
+        <FilterSidebar
+          categoryOptions={categoryOptions.length ? categoryOptions : undefined}
+          styleOptions={styleOptions.length ? styleOptions : undefined}
+          seasonOptions={seasonOptions.length ? seasonOptions : undefined}
+          onFiltersChange={setFilters}
+        />
       </div>
 
       {/* Main Content */}

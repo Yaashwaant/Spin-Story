@@ -1,14 +1,14 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
-const categories = [
+type FilterOption = { id: string; label: string }
+
+const defaultCategories: FilterOption[] = [
   { id: "tops", label: "Tops" },
   { id: "bottoms", label: "Bottoms" },
   { id: "outerwear", label: "Outerwear" },
@@ -17,7 +17,7 @@ const categories = [
   { id: "accessories", label: "Accessories" },
 ]
 
-const styles = [
+const defaultStyles: FilterOption[] = [
   { id: "casual", label: "Casual" },
   { id: "formal", label: "Formal" },
   { id: "sporty", label: "Sporty" },
@@ -25,7 +25,7 @@ const styles = [
   { id: "boho", label: "Boho" },
 ]
 
-const seasons = [
+const defaultSeasons: FilterOption[] = [
   { id: "spring", label: "Spring" },
   { id: "summer", label: "Summer" },
   { id: "autumn", label: "Autumn" },
@@ -33,6 +33,9 @@ const seasons = [
 ]
 
 interface FilterSidebarProps {
+  categoryOptions?: FilterOption[]
+  styleOptions?: FilterOption[]
+  seasonOptions?: FilterOption[]
   onFiltersChange?: (filters: {
     categories: string[]
     styles: string[]
@@ -40,16 +43,17 @@ interface FilterSidebarProps {
   }) => void
 }
 
-export function FilterSidebar({ onFiltersChange }: FilterSidebarProps) {
+export function FilterSidebar({
+  categoryOptions,
+  styleOptions,
+  seasonOptions,
+  onFiltersChange,
+}: FilterSidebarProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedStyles, setSelectedStyles] = useState<string[]>([])
   const [selectedSeasons, setSelectedSeasons] = useState<string[]>([])
 
-  const toggleFilter = (
-    id: string,
-    selected: string[],
-    setSelected: React.Dispatch<React.SetStateAction<string[]>>,
-  ) => {
+  const toggleFilter = (id: string, setSelected: React.Dispatch<React.SetStateAction<string[]>>) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
@@ -74,12 +78,12 @@ export function FilterSidebar({ onFiltersChange }: FilterSidebarProps) {
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground">Category</h4>
           <div className="space-y-2">
-            {categories.map((category) => (
+            {(categoryOptions?.length ? categoryOptions : defaultCategories).map((category) => (
               <div key={category.id} className="flex items-center gap-2">
                 <Checkbox
                   id={category.id}
                   checked={selectedCategories.includes(category.id)}
-                  onCheckedChange={() => toggleFilter(category.id, selectedCategories, setSelectedCategories)}
+                  onCheckedChange={() => toggleFilter(category.id, setSelectedCategories)}
                 />
                 <Label htmlFor={category.id} className="text-sm font-normal text-muted-foreground cursor-pointer">
                   {category.label}
@@ -95,10 +99,10 @@ export function FilterSidebar({ onFiltersChange }: FilterSidebarProps) {
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground">Style</h4>
           <div className="flex flex-wrap gap-2">
-            {styles.map((style) => (
+            {(styleOptions?.length ? styleOptions : defaultStyles).map((style) => (
               <button
                 key={style.id}
-                onClick={() => toggleFilter(style.id, selectedStyles, setSelectedStyles)}
+                onClick={() => toggleFilter(style.id, setSelectedStyles)}
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium transition-all",
                   selectedStyles.includes(style.id)
@@ -116,10 +120,10 @@ export function FilterSidebar({ onFiltersChange }: FilterSidebarProps) {
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-foreground">Season</h4>
           <div className="flex flex-wrap gap-2">
-            {seasons.map((season) => (
+            {(seasonOptions?.length ? seasonOptions : defaultSeasons).map((season) => (
               <button
                 key={season.id}
-                onClick={() => toggleFilter(season.id, selectedSeasons, setSelectedSeasons)}
+                onClick={() => toggleFilter(season.id, setSelectedSeasons)}
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium transition-all",
                   selectedSeasons.includes(season.id)
