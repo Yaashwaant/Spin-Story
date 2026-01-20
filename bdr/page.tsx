@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileModal } from "@/components/bdr/profile-modal"
 import { CustomerUploadModal } from "@/components/bdr/customer-upload-modal"
-import { Plus, Search } from "lucide-react"
+import { Plus } from "lucide-react"
 
 interface BdrCustomerSummary {
   id: string
@@ -21,8 +21,6 @@ interface BdrCustomerSummary {
   updatedAt: string
   profile?: any
   preferences?: any
-  fullName?: string
-  phoneNumber?: string
 }
 
 export default function BdrDashboardPage() {
@@ -32,16 +30,11 @@ export default function BdrDashboardPage() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [selectedUploadCustomer, setSelectedUploadCustomer] = useState<BdrCustomerSummary | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     const load = async () => {
       try {
-        const url = new URL("/api/bdr/customers", window.location.origin)
-        if (searchQuery) {
-          url.searchParams.set("search", searchQuery)
-        }
-        const res = await fetch(url.toString())
+        const res = await fetch("/api/bdr/customers")
         if (!res.ok) {
           setCustomers([])
           return
@@ -55,7 +48,7 @@ export default function BdrDashboardPage() {
       }
     }
     load()
-  }, [searchQuery])
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,26 +62,6 @@ export default function BdrDashboardPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             See customer status and open the assistant to plan outfits for them.
           </p>
-          <div className="mt-4 relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by contact number or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-border/40 bg-background pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
         </div>
         <Card className="rounded-3xl shadow-sm">
           <CardHeader className="border-b border-border/40">
@@ -124,10 +97,7 @@ export default function BdrDashboardPage() {
             )}
             {!loading && customers && customers.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                {searchQuery 
-                  ? `No customers found matching "${searchQuery}". Try a different search term.`
-                  : "No customers are available yet. When customers are added in the backend, they appear here."
-                }
+                No customers are available yet. When customers are added in the backend, they appear here.
               </p>
             )}
             {!loading && customers && customers.length > 0 && (
@@ -254,3 +224,4 @@ export default function BdrDashboardPage() {
     </div>
   )
 }
+
