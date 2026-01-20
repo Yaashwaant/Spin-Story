@@ -32,7 +32,6 @@ export function Navbar() {
     { href: "/dashboard", label: "Home" },
     { href: "/wardrobe", label: "Wardrobe" },
     { href: "/outfit-planner", label: "Outfit planner" },
-    { href: "/shop", label: "Shop" },
   ];
 
   return (
