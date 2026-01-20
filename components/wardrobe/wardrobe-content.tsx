@@ -115,7 +115,7 @@ export function WardrobeContent() {
   }, [searchQuery])
 
   // Handle successful upload completion
-  const handleUploadComplete = useCallback(() => {
+  const handleUploadComplete = useCallback((uploadedFiles?: File[]) => {
     // Refresh wardrobe items after successful upload
     fetchWardrobeItems()
   }, [fetchWardrobeItems])

@@ -1,198 +1,247 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Cloud, ArrowDown, X, Loader2, Check } from "lucide-react"
+import { Cloud, ArrowDown, X, Loader2, Check, Upload, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type UploadState = "idle" | "preview" | "uploading" | "analyzing" | "success" | "error"
 
+interface FileUpload {
+  id: string
+  file: File
+  preview: string
+  status: "pending" | "uploading" | "analyzing" | "success" | "error"
+  progress: number
+  error?: string
+  result?: any
+}
+
 interface UploadDropzoneProps {
-  onUploadComplete?: (file: File) => void
+  onUploadComplete?: (files: File[]) => void
   customerId?: string
 }
 
 export function UploadDropzone({ onUploadComplete, customerId = 'demo-customer' }: UploadDropzoneProps) {
-  const [state, setState] = useState<UploadState>("idle")
+  const [files, setFiles] = useState<FileUpload[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setState("error")
-      return
-    }
-
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-    setSelectedFile(file)
-    setState("preview")
+  const addFiles = useCallback((incoming: FileList | File[]) => {
+    const images = Array.from(incoming).filter((f) => f.type.startsWith("image/"))
+    const newUploads: FileUpload[] = images.map((file) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file,
+      preview: URL.createObjectURL(file),
+      status: "pending",
+      progress: 0,
+    }))
+    setFiles((prev) => [...prev, ...newUploads])
   }, [])
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragOver(false)
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files)
+  }, [addFiles])
 
-      const file = e.dataTransfer.files[0]
-      if (file) {
-        handleFile(file)
-      }
-    },
-    [handleFile],
-  )
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) addFiles(e.target.files)
+  }, [addFiles])
 
-  const handleFileInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        handleFile(file)
-      }
-    },
-    [handleFile],
-  )
-
-  const handleUpload = useCallback(async () => {
-    if (!selectedFile) return
-
-    setState("uploading")
-    setProgress(0)
+  const uploadSingle = async (upload: FileUpload): Promise<FileUpload> => {
+    const { file } = upload
+    setFiles((prev) => prev.map((f) => (f.id === upload.id ? { ...f, status: "uploading", progress: 10 } : f)))
 
     try {
-      console.log('=== CLOUDINARY CLIENT: Starting upload process ===')
-      console.log('File details:', {
-        name: selectedFile.name,
-        type: selectedFile.type,
-        size: selectedFile.size,
-        customerId: customerId
-      })
-
-      // Step 1: Convert image to base64 for AI analysis
-      console.log('=== CLOUDINARY CLIENT: Converting image to base64 ===')
+      // Convert to base64
       const base64Image = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result as string)
-        reader.onerror = () => reject(new Error('Failed to read image file'))
-        reader.readAsDataURL(selectedFile)
+        reader.onerror = () => reject(new Error("Failed to read image file"))
+        reader.readAsDataURL(file)
       })
-      console.log('=== CLOUDINARY CLIENT: Base64 conversion successful ===')
 
-      // Step 2: Upload to Cloudinary
-      setProgress(30)
-      console.log('=== CLOUDINARY CLIENT: Preparing upload form data ===')
-      
+      setFiles((prev) => prev.map((f) => (f.id === upload.id ? { ...f, progress: 30 } : f)))
+
+      // Upload to Cloudinary
       const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('customerId', customerId)
-      formData.append('fileName', selectedFile.name)
-      
-      console.log('=== CLOUDINARY CLIENT: Uploading to Cloudinary ===')
-      const uploadResponse = await fetch('/api/wardrobe/upload-cloudinary', {
-        method: 'POST',
+      formData.append("file", file)
+      formData.append("customerId", customerId)
+      formData.append("fileName", file.name)
+
+      const uploadRes = await fetch("/api/wardrobe/upload-cloudinary", {
+        method: "POST",
         body: formData,
       })
 
-      console.log('=== CLOUDINARY CLIENT: Upload response received ===')
-      console.log('Response status:', uploadResponse.status)
-      console.log('Response status text:', uploadResponse.statusText)
+      if (!uploadRes.ok) throw new Error("Cloudinary upload failed")
+      const { url, publicId } = await uploadRes.json()
 
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text()
-        console.error('=== CLOUDINARY CLIENT: Upload failed ===')
-        console.error('Error response body:', errorText)
-        throw new Error(`Cloudinary upload failed: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`)
-      }
+      setFiles((prev) => prev.map((f) => (f.id === upload.id ? { ...f, progress: 60 } : f)))
 
-      const uploadData = await uploadResponse.json()
-      console.log('=== CLOUDINARY CLIENT: Upload successful ===')
-      console.log('Upload data:', uploadData)
+      // AI analysis
+      setFiles((prev) => prev.map((f) => (f.id === upload.id ? { ...f, status: "analyzing", progress: 80 } : f)))
 
-      if (!uploadData.success) {
-        throw new Error('Cloudinary upload was not successful')
-      }
-
-      const { url, publicId } = uploadData
-      setProgress(60)
-
-      // Step 3: Analyze with AI using base64 image data
-      console.log('=== CLOUDINARY CLIENT: Starting AI analysis ===')
-      const analysisResponse = await fetch('/api/ai/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const aiRes = await fetch("/api/ai/analyze-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageData: base64Image,
-          imageUrl: url, // Use Cloudinary URL for metadata
-          customerId: customerId
-        })
+          imageUrl: url,
+          customerId,
+        }),
       })
 
-      console.log('=== CLOUDINARY CLIENT: AI analysis response received ===')
-      console.log('Analysis response status:', analysisResponse.status)
+      if (!aiRes.ok) throw new Error("AI analysis failed")
+      const { data } = await aiRes.json()
 
-      if (!analysisResponse.ok) {
-        const errorText = await analysisResponse.text()
-        console.error('=== CLOUDINARY CLIENT: AI analysis failed ===')
-        console.error('Error response body:', errorText)
-        throw new Error(`AI analysis failed: ${analysisResponse.status} ${analysisResponse.statusText} - ${errorText}`)
-      }
-
-      setProgress(80)
-      const { data } = await analysisResponse.json()
-      console.log('=== CLOUDINARY CLIENT: AI analysis successful ===')
-      console.log('Analysis data:', data)
-
-      // Step 4: Save the analyzed item to wardrobe
-      console.log('=== CLOUDINARY CLIENT: Saving item to wardrobe ===')
-      const saveResponse = await fetch('/api/wardrobe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      // Save to wardrobe
+      const saveRes = await fetch("/api/wardrobe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       })
 
-      console.log('=== CLOUDINARY CLIENT: Save response received ===')
-      console.log('Save response status:', saveResponse.status)
-
-      if (!saveResponse.ok) {
-        const errorText = await saveResponse.text()
-        console.warn('=== CLOUDINARY CLIENT: Failed to save item to wardrobe ===')
-        console.warn('Error response body:', errorText)
-        // Don't fail the upload if save fails, just warn
-      } else {
-        console.log('=== CLOUDINARY CLIENT: Item saved to wardrobe successfully ===')
+      if (!saveRes.ok) {
+        console.warn("Failed to save to wardrobe")
       }
 
-      setState("success")
-      if (selectedFile) {
-        onUploadComplete?.(selectedFile)
-      }
-
-    } catch (error) {
-      console.error('Upload/Analysis error:', error)
-      setState("error")
+      return { ...upload, status: "success", progress: 100, result: data }
+    } catch (err: any) {
+      return { ...upload, status: "error", progress: 0, error: err.message || "Upload failed" }
     }
-  }, [selectedFile, onUploadComplete, customerId])
+  }
 
-  const handleReset = useCallback(() => {
-    setState("idle")
-    setPreviewUrl(null)
-    setSelectedFile(null)
-    setProgress(0)
-  }, [])
+  const handleUploadAll = async () => {
+    const pending = files.filter((f) => f.status === "pending")
+    if (!pending.length) return
+
+    setIsProcessing(true)
+    const results: FileUpload[] = []
+    for (const upload of pending) {
+      const updated = await uploadSingle(upload)
+      results.push(updated)
+      setFiles((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
+    }
+    setIsProcessing(false)
+
+    const succeeded = results.filter((r) => r.status === "success")
+    if (succeeded.length && onUploadComplete) {
+      onUploadComplete(succeeded.map((s) => s.file))
+    }
+  }
+
+  const removeFile = (id: string) => {
+    setFiles((prev) => {
+      const target = prev.find((f) => f.id === id)
+      if (target) URL.revokeObjectURL(target.preview)
+      return prev.filter((f) => f.id !== id)
+    })
+  }
+
+  const reset = () => {
+    files.forEach((f) => URL.revokeObjectURL(f.preview))
+    setFiles([])
+  }
+
+  const hasPending = files.some((f) => f.status === "pending")
+  const hasProcessing = files.some((f) => f.status === "uploading" || f.status === "analyzing")
+  const hasSuccess = files.some((f) => f.status === "success")
+
+  const renderIdle = () => (
+    <>
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+        <Cloud className="h-7 w-7 text-slate-400" />
+      </div>
+      <ArrowDown className="mb-2 h-4 w-4 text-slate-300" />
+      <p className="mb-1 text-center font-medium text-foreground">Drag & drop clothing images</p>
+      <p className="mb-3 text-center text-sm text-muted-foreground">or click to browse files</p>
+      <label>
+        <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileInput} />
+        <Button variant="outline" className="rounded-xl bg-transparent" asChild>
+          <span>Browse Files</span>
+        </Button>
+      </label>
+    </>
+  )
+
+  const renderFileList = () => (
+    <div className="w-full space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{files.length} image(s) selected</p>
+        <Button variant="ghost" size="sm" onClick={reset} className="h-7 text-xs">
+          <Trash2 className="mr-1 h-3 w-3" />
+          Clear all
+        </Button>
+      </div>
+
+      <div className="max-h-64 space-y-2 overflow-y-auto">
+        {files.map((upload) => (
+          <div key={upload.id} className="flex items-center gap-3 rounded-lg border p-2">
+            <img src={upload.preview} alt="" className="h-10 w-10 rounded object-cover" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-foreground">{upload.file.name}</p>
+              <div className="mt-1">
+                {upload.status === "pending" && <div className="h-1 rounded bg-slate-200" />}
+                {upload.status === "uploading" && <Progress value={upload.progress} className="h-1" />}
+                {upload.status === "analyzing" && (
+                  <div className="flex items-center gap-1 text-xs text-amber-600">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Analyzing...
+                  </div>
+                )}
+                {upload.status === "success" && (
+                  <div className="flex items-center gap-1 text-xs text-green-600">
+                    <Check className="h-3 w-3" />
+                    Ready
+                  </div>
+                )}
+                {upload.status === "error" && (
+                  <div className="text-xs text-destructive">{upload.error}</div>
+                )}
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(upload.id)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={handleUploadAll} disabled={!hasPending || hasProcessing} className="flex-1 rounded-xl">
+          {hasProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload All
+            </>
+          )}
+        </Button>
+        <label>
+          <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileInput} />
+          <Button variant="outline" className="rounded-xl" asChild>
+            <span>Add More</span>
+          </Button>
+        </label>
+      </div>
+    </div>
+  )
 
   return (
     <Card
       className={cn(
         "relative overflow-hidden rounded-2xl border-2 border-dashed transition-all",
         isDragOver && "border-primary bg-primary/5",
-        state === "idle" && "border-border/50 hover:border-border",
-        state === "error" && "border-destructive bg-destructive/5",
-        (state === "preview" || state === "uploading" || state === "analyzing" || state === "success") &&
-          "border-solid border-border/50",
+        files.length > 0 ? "border-solid border-border/50" : "border-border/50 hover:border-border",
       )}
       onDragOver={(e) => {
         e.preventDefault()
@@ -202,93 +251,7 @@ export function UploadDropzone({ onUploadComplete, customerId = 'demo-customer' 
       onDrop={handleDrop}
     >
       <CardContent className="flex flex-col items-center justify-center py-8">
-        {/* Idle State */}
-        {state === "idle" && (
-          <>
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-              <Cloud className="h-7 w-7 text-slate-400" />
-            </div>
-            <ArrowDown className="mb-2 h-4 w-4 text-slate-300" />
-            <p className="mb-1 text-center font-medium text-foreground">Drag & drop clothing image</p>
-            <p className="mb-3 text-center text-sm text-muted-foreground">or click to browse files</p>
-            <label>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileInput} />
-              <Button variant="outline" className="rounded-xl bg-transparent" asChild>
-                <span>Browse Files</span>
-              </Button>
-            </label>
-          </>
-        )}
-
-        {/* Preview State */}
-        {state === "preview" && previewUrl && (
-          <div className="w-full max-w-xs">
-            <div className="relative mb-4 aspect-square overflow-hidden rounded-xl bg-slate-50">
-              <img src={previewUrl || "/placeholder.svg"} alt="Preview" className="h-full w-full object-cover" />
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white"
-                onClick={handleReset}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button className="w-full rounded-xl bg-primary text-primary-foreground" onClick={handleUpload}>
-              Upload & Analyze
-            </Button>
-          </div>
-        )}
-
-        {/* Uploading State */}
-        {state === "uploading" && (
-          <div className="w-full max-w-xs">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-            <p className="mb-3 text-center font-medium text-foreground">Uploading...</p>
-            <Progress value={progress} className="h-2 rounded-full" />
-            <p className="mt-2 text-center text-sm text-muted-foreground">{progress}%</p>
-          </div>
-        )}
-
-        {/* Analyzing State */}
-        {state === "analyzing" && (
-          <div className="text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 mx-auto">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-            </div>
-            <p className="font-medium text-foreground">AI is analyzing your clothing...</p>
-            <p className="mt-1 text-sm text-muted-foreground">Detecting type, color, and style</p>
-          </div>
-        )}
-
-        {/* Success State */}
-        {state === "success" && (
-          <div className="text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <p className="font-medium text-green-700">Successfully added to wardrobe!</p>
-            <Button variant="link" className="mt-2 text-primary" onClick={handleReset}>
-              Upload another item
-            </Button>
-          </div>
-        )}
-
-        {/* Error State */}
-        {state === "error" && (
-          <div className="text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mx-auto">
-              <X className="h-8 w-8 text-destructive" />
-            </div>
-            <p className="font-medium text-destructive">Upload failed</p>
-            <p className="mt-1 text-sm text-muted-foreground">Please try again with a valid image file</p>
-            <Button variant="outline" className="mt-4 rounded-xl bg-transparent" onClick={handleReset}>
-              Try Again
-            </Button>
-          </div>
-        )}
+        {files.length === 0 ? renderIdle() : renderFileList()}
       </CardContent>
     </Card>
   )
