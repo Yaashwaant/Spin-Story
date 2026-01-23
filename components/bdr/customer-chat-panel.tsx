@@ -170,7 +170,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
   console.log("CustomerChatPanel - customerId:", customerId)
   console.log("CustomerChatPanel - customerName:", customerName)
   
-  const [activeTab, setActiveTab] = useState<"general" | "plan">("general")
+  const [activeTab, setActiveTab] = useState<"general" | "plan">("plan")
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
@@ -383,8 +383,8 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
       <CardContent className="pt-4 space-y-4">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "general" | "plan")}>
           <TabsList className="mb-4">
-            <TabsTrigger value="general">General advice</TabsTrigger>
             <TabsTrigger value="plan">Plan outfits</TabsTrigger>
+            <TabsTrigger value="general">General advice</TabsTrigger>
           </TabsList>
           <div className={activeTab === "general" ? "block" : "hidden"}>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
@@ -533,7 +533,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Get your Spin-Story Here
+                        Get your Spin-Storey Here
                       </p>
                     )}
                   </ScrollArea>
