@@ -12,9 +12,14 @@ import { useAuth } from "@/components/auth/auth-provider"
 interface ClothingItem {
   id: string
   name: string
-  imageUrl: string
-  category: string
+  image: string
+  type: string
+  color: string
+  season: string
+  styles: string[]
+  customerId: string
   createdAt: Date
+  updatedAt: Date
 }
 
 const moods = ["Relaxed", "Playful", "Elegant", "Confident"]
@@ -97,18 +102,18 @@ export function FindOutfitPanel({ onGenerateOutfit, wardrobeItems: externalWardr
   const matchOutfitFromWardrobe = useCallback((mood: string, season: string, occasion: string): ClothingItem[] => {
     if (wardrobeItems.length === 0) return []
 
-    // Define outfit composition rules based on category
+    // Define outfit composition rules based on type
     const outfitRules = {
       tops: ['shirt', 't-shirt', 'blouse', 'sweater', 'jacket', 'top'],
       bottoms: ['pants', 'jeans', 'trousers', 'shorts', 'skirt', 'bottom'],
-      shoes: ['sneakers', 'shoes', 'boots', 'sandals', 'footwear'],
+      shoes: ['sneakers', 'shoes', 'boots', 'heels', 'sandals', 'footwear'],
       accessories: ['watch', 'bag', 'scarf', 'hat', 'belt', 'accessory']
     }
 
-    // Simple filtering based on name and category (since we don't have full wardrobe data in dashboard)
+    // Simple filtering based on name and type (since we don't have full wardrobe data in dashboard)
     let filteredItems = wardrobeItems.filter(item => {
       const nameLower = item.name.toLowerCase()
-      const categoryLower = item.category.toLowerCase()
+      const typeLower = item.type.toLowerCase()
       
       // Basic mood matching based on item names
       let moodMatch = true
@@ -138,12 +143,12 @@ export function FindOutfitPanel({ onGenerateOutfit, wardrobeItems: externalWardr
       return moodMatch && occasionMatch
     })
 
-    // Group items by category and select one from each
+    // Group items by type and select one from each
     const groupedItems = {
-      tops: filteredItems.filter(item => outfitRules.tops.some(rule => item.category.toLowerCase().includes(rule))),
-      bottoms: filteredItems.filter(item => outfitRules.bottoms.some(rule => item.category.toLowerCase().includes(rule))),
-      shoes: filteredItems.filter(item => outfitRules.shoes.some(rule => item.category.toLowerCase().includes(rule))),
-      accessories: filteredItems.filter(item => outfitRules.accessories.some(rule => item.category.toLowerCase().includes(rule)))
+      tops: filteredItems.filter(item => outfitRules.tops.some(rule => item.type.toLowerCase().includes(rule))),
+      bottoms: filteredItems.filter(item => outfitRules.bottoms.some(rule => item.type.toLowerCase().includes(rule))),
+      shoes: filteredItems.filter(item => outfitRules.shoes.some(rule => item.type.toLowerCase().includes(rule))),
+      accessories: filteredItems.filter(item => outfitRules.accessories.some(rule => item.type.toLowerCase().includes(rule)))
     }
 
     // Build complete outfit - select one item from each category
@@ -211,7 +216,7 @@ export function FindOutfitPanel({ onGenerateOutfit, wardrobeItems: externalWardr
             title: `${moodLabel} ${selectedSeason} Look from Your Wardrobe`,
             summary: `For ${occasion || "your plans"} • ${selectedMoods.join(", ")} mood • From your wardrobe`,
             items: matchedOutfit.map(item => item.name),
-            itemImages: matchedOutfit.map(item => item.imageUrl),
+            itemImages: matchedOutfit.map(item => item.image),
             matchedItems: matchedOutfit,
           }
           onGenerateOutfit?.(suggestion)
@@ -237,7 +242,7 @@ export function FindOutfitPanel({ onGenerateOutfit, wardrobeItems: externalWardr
         // Use items from user's wardrobe with images - clean visual only
         const suggestion: OutfitSuggestion = {
           items: matchedOutfit.map(item => item.name),
-          itemImages: matchedOutfit.map(item => item.imageUrl),
+          itemImages: matchedOutfit.map(item => item.image),
           matchedItems: matchedOutfit,
         }
         onGenerateOutfit?.(suggestion)

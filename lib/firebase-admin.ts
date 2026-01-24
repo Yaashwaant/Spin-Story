@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 import { getStorage } from "firebase-admin/storage"
+import { getAuth } from "firebase-admin/auth"
 
 const hasServiceAccountEnv =
   !!process.env.FIREBASE_PROJECT_ID &&
@@ -48,6 +49,7 @@ if (!getApps().length) {
 
 export const adminDb = getFirestore()
 export const adminStorage = getStorage()
+export const adminAuth = getAuth()
 
 // Test the connection
 adminDb.collection('test').doc('connection').get().then(() => {

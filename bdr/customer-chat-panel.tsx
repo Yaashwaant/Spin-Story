@@ -510,7 +510,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Get your Spin-Story Here
+                        Get your Spin-Storey Here
                       </p>
                     )}
                   </ScrollArea>

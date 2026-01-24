@@ -8,7 +8,7 @@ import { AuthProvider } from "@/components/auth/auth-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "STYLIZE.AI - Your AI Wardrobe Assistant",
+  title: "Spin Storey - Your AI Wardrobe Assistant",
   description: "AI-powered wardrobe management and outfit recommendations",
   generator: "v0.app",
   icons: {

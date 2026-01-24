@@ -7,11 +7,10 @@ import { signInSchema, type SignInInput } from "@/models/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -40,86 +39,122 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">STYLIZE.AI</h1>
-          <p className="text-muted-foreground">Your AI Wardrobe Assistant</p>
+    <div className="min-h-screen flex">
+      {/* Left Panel - Brand */}
+      <div className="hidden lg:flex lg:w-1/2 bg-black text-white flex-col justify-between p-12 relative overflow-hidden">
+        {/* Abstract background pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-transparent via-white/5 to-transparent" />
+          <div className="absolute top-0 left-0 w-full h-full" 
+               style={{
+                 backgroundImage: `repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 20px)`
+               }} />
         </div>
         
-        <Card className="mx-auto max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>
-              Enter your email or phone number to sign in to your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-6 h-6 bg-white rounded-full relative">
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-0.5 bg-black" />
+            </div>
+            <span className="text-xl font-bold tracking-tight">Spin Storey</span>
+          </div>
+        </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+        <div className="relative z-10 max-w-md">
+          <h1 className="text-5xl lg:text-6xl font-bold leading-tight tracking-tighter mb-6">
+            Your wardrobe,<br />reimagined.
+          </h1>
+          <p className="text-lg text-gray-400 leading-relaxed">
+            Effortlessly organize your clothes and generate new outfits instantly. The smartest way to dress is here.
+          </p>
+        </div>
+
+        <div className="relative z-10 text-gray-500 text-sm">
+          © 2026 Spin Storey Inc.
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8 lg:p-12">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4 lg:hidden">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="text-lg font-bold">Spin Storey</span>
+            </div>
+            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2">Welcome back</h2>
+            <p className="text-gray-600">Please enter your details to sign in to your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="emailOrPhone" className="text-sm font-medium">Email or Phone Number</Label>
+              <Input
+                id="emailOrPhone"
+                placeholder="john@example.com or +1234567890"
+                {...register("emailOrPhone")}
+                disabled={isLoading}
+                className="bg-gray-50 border-gray-200 focus:bg-white focus:border-black focus:ring-black"
+              />
+              {errors.emailOrPhone && (
+                <p className="text-sm text-red-500">{errors.emailOrPhone.message}</p>
               )}
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="emailOrPhone">Email or Phone Number</Label>
-                <Input
-                  id="emailOrPhone"
-                  placeholder="john@example.com or +1234567890"
-                  {...register("emailOrPhone")}
-                  disabled={isLoading}
-                />
-                {errors.emailOrPhone && (
-                  <p className="text-sm text-red-500">{errors.emailOrPhone.message}</p>
-                )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-gray-600 hover:text-black hover:underline">
+                  Forgot password?
+                </Link>
               </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                {...register("password")}
+                disabled={isLoading}
+                className="bg-gray-50 border-gray-200 focus:bg-white focus:border-black focus:ring-black"
+              />
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a href="/forgot-password" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  {...register("password")}
-                  disabled={isLoading}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password.message}</p>
-                )}
-              </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-black hover:bg-gray-800 text-white py-3"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </form>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing In...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <a href="/signup" className="text-primary hover:underline">
+              <Link href="/signup" className="text-black font-medium hover:underline">
                 Sign up
-              </a>
-            </div>
-            <div className="mt-2 text-center text-sm">
-              <a href="/bdr/login" className="text-primary hover:underline">
-                BDR Login
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+              </Link>
+            </p>
+            <Link href="/bdr/login" className="text-sm text-gray-500 hover:text-gray-700 hover:underline">
+              BDR Login Access
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

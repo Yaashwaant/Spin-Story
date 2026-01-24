@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -358,6 +359,11 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
 
   return (
     <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
       <Card className="rounded-3xl shadow-sm">
       <CardHeader className="border-b border-border/40">
         <div className="flex items-center justify-between">
@@ -584,6 +590,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
         }}
       />
     )}
+      </motion.div>
     </>
   )
 }

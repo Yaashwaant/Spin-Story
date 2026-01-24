@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { ClothingCard, type ClothingItemData } from "@/components/wardrobe/clothing-card"
 import { UploadDropzone } from "@/components/wardrobe/upload-dropzone"
 import { FilterSidebar } from "@/components/wardrobe/filter-sidebar"
@@ -166,22 +167,38 @@ export function WardrobeContent() {
   return (
     <div className="grid gap-8 lg:grid-cols-4">
       {/* Left Sidebar - Filters */}
-      <div className="lg:col-span-1">
+      <motion.div 
+        className="lg:col-span-1"
+        initial={{ opacity: 0, x: -30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+      >
         <FilterSidebar
           categoryOptions={categoryOptions.length ? categoryOptions : undefined}
           styleOptions={styleOptions.length ? styleOptions : undefined}
           seasonOptions={seasonOptions.length ? seasonOptions : undefined}
           onFiltersChange={setFilters}
         />
-      </div>
+      </motion.div>
 
       {/* Main Content */}
       <div className="space-y-6 lg:col-span-3">
         {/* Upload Zone */}
-        <UploadDropzone onUploadComplete={handleUploadComplete} customerId={customerId} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+        >
+          <UploadDropzone onUploadComplete={handleUploadComplete} customerId={customerId} />
+        </motion.div>
 
         {/* Search & View Controls */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <motion.div 
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+        >
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -204,16 +221,21 @@ export function WardrobeContent() {
               </TabsList>
             </Tabs>
           </div>
-        </div>
+        </motion.div>
 
         {/* Wardrobe Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <motion.div 
+            className="flex items-center justify-center py-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-sm text-muted-foreground">Loading wardrobe items...</p>
             </div>
-          </div>
+          </motion.div>
         ) : filteredWardrobe.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredWardrobe.map((item) => (
@@ -221,7 +243,13 @@ export function WardrobeContent() {
             ))}
           </div>
         ) : (
-          <EmptyWardrobeState />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <EmptyWardrobeState />
+          </motion.div>
         )}
       </div>
     </div>
