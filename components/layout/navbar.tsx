@@ -40,7 +40,7 @@ export function Navbar() {
         <div className="flex h-20 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Spin Storey</span>
+            <span className="text-xl font-bold font-serif">Spin Storey</span>
           </Link>
 
           <nav className="hidden items-center gap-2 md:flex">
@@ -48,7 +48,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors ${
+                className={`relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors font-serif ${
                   pathname === item.href ? "text-slate-900" : "hover:text-slate-900"
                 }`}
               >
@@ -75,9 +75,9 @@ export function Navbar() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
+                    <DropdownMenuLabel className="font-normal font-serif">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.fullName}</p>
+                        <p className="text-sm font-medium leading-none font-serif">{user.fullName}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>
@@ -85,19 +85,19 @@ export function Navbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center">
+                      <Link href="/profile" className="flex items-center font-serif">
                         <User className="mr-2 h-4 w-4" />
                         Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/settings" className="flex items-center">
+                      <Link href="/settings" className="flex items-center font-serif">
                         <Settings className="mr-2 h-4 w-4" />
                         Settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => signOut()}>
+                    <DropdownMenuItem onClick={() => signOut()} className="font-serif">
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </DropdownMenuItem>
@@ -107,10 +107,10 @@ export function Navbar() {
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
+                  <Link href="/login" className="font-serif">Sign In</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/signup">Sign Up</Link>
+                  <Link href="/signup" className="font-serif">Sign Up</Link>
                 </Button>
               </div>
             )}

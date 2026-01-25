@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       const wardrobeSnapshot = await adminDb
         .collection("wardrobe")
         .where("customerId", "==", userId)
-        .limit(6)
+
         .get();
 
       // Process wardrobe items immediately

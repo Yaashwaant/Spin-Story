@@ -56,7 +56,7 @@ export default function SettingsPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+            <h1 className="text-3xl font-bold text-foreground font-serif">Settings</h1>
             <p className="text-muted-foreground">Manage your account preferences and privacy settings</p>
           </div>
 
@@ -203,7 +203,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium">Delete Account</div>
+                    <div className="font-medium font-serif">Delete Account</div>
                     <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data</p>
                   </div>
                   <Button 

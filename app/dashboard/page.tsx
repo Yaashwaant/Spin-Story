@@ -142,7 +142,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <motion.h1 
-            className="text-4xl font-bold tracking-tight text-foreground"
+            className="text-4xl font-bold tracking-tight text-foreground font-serif"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
@@ -169,7 +169,7 @@ export default function DashboardPage() {
           >
             <Card className="min-h-[420px] rounded-3xl">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">Outfit Suggestion</CardTitle>
+                <CardTitle className="text-sm font-semibold font-serif">Outfit Suggestion</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {suggestion ? (

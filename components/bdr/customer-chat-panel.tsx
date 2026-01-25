@@ -52,7 +52,7 @@ const markdownComponents = {
       href={props.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-medium underline underline-offset-2 hover:no-underline"
+      className="font-medium underline underline-offset-2 hover:no-underline font-serif"
     >
       {props.children}
     </a>
@@ -70,7 +70,7 @@ const markdownComponents = {
   ),
   thead: (props: any) => <thead className="bg-muted/40">{props.children}</thead>,
   th: (props: any) => (
-    <th className="px-3 py-2 text-left font-semibold border border-border/60 align-top">
+    <th className="px-3 py-2 text-left font-semibold border border-border/60 align-top font-serif">
       {props.children}
     </th>
   ),
@@ -79,10 +79,10 @@ const markdownComponents = {
       {props.children}
     </td>
   ),
-  h1: (props: any) => <h1 className="text-base font-semibold">{props.children}</h1>,
-  h2: (props: any) => <h2 className="text-sm font-semibold">{props.children}</h2>,
-  h3: (props: any) => <h3 className="text-sm font-semibold">{props.children}</h3>,
-  strong: (props: any) => <strong className="font-semibold">{props.children}</strong>,
+  h1: (props: any) => <h1 className="text-base font-semibold font-serif">{props.children}</h1>,
+  h2: (props: any) => <h2 className="text-sm font-semibold font-serif">{props.children}</h2>,
+  h3: (props: any) => <h3 className="text-sm font-semibold font-serif">{props.children}</h3>,
+  strong: (props: any) => <strong className="font-semibold font-serif">{props.children}</strong>,
   em: (props: any) => <em className="italic">{props.children}</em>,
 }
 
@@ -108,7 +108,7 @@ function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
         
         // Replace matches with clickable links
         modifiedText = modifiedText.replace(regex, 
-          `<a href="${item.image}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-medium">${item.name}</a>`
+          `<a href="${item.image}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-medium font-serif">${item.name}</a>`
         )
       }
     })
@@ -130,7 +130,7 @@ function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
 
         const headers = trimmedLine.split("|").map((h) => h.trim()).filter(Boolean)
         headers.forEach((header) => {
-          html += `      <th class="px-3 py-2 text-left font-semibold text-gray-700 border border-gray-300">${header}</th>\n`
+          html += `      <th class="px-3 py-2 text-left font-semibold text-gray-700 border border-gray-300 font-serif">${header}</th>\n`
         })
 
         html += "    </tr>\n  </thead>\n  <tbody>\n"
@@ -368,7 +368,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
       <CardHeader className="border-b border-border/40">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg font-semibold">
+            <CardTitle className="text-lg font-semibold font-serif">
               {customerName ? `AI stylist for ${customerName}` : "AI stylist for this customer"}
             </CardTitle>
             <CardDescription className="text-sm">
@@ -461,7 +461,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)]">
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Plan type</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground font-serif">Plan type</p>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -493,7 +493,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground font-serif">
                     Plan title
                   </p>
                   <Input

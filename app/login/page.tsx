@@ -42,13 +42,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex">
       {/* Left Panel - Brand */}
       <div className="hidden lg:flex lg:w-1/2 bg-black text-white flex-col justify-between p-12 relative overflow-hidden">
-        {/* Abstract background pattern */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-transparent via-white/5 to-transparent" />
-          <div className="absolute top-0 left-0 w-full h-full" 
-               style={{
-                 backgroundImage: `repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 20px)`
-               }} />
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <img 
+            src="/bg.jpg" 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
         
         <div className="relative z-10">
@@ -56,12 +57,12 @@ export default function LoginPage() {
             <div className="w-6 h-6 bg-white rounded-full relative">
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-0.5 bg-black" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Spin Storey</span>
+            <span className="text-xl font-bold tracking-tight font-serif">Spin Storey</span>
           </div>
         </div>
 
         <div className="relative z-10 max-w-md">
-          <h1 className="text-5xl lg:text-6xl font-bold leading-tight tracking-tighter mb-6">
+          <h1 className="text-5xl lg:text-6xl font-bold leading-tight tracking-tighter mb-6 font-serif">
             Your wardrobe,<br />reimagined.
           </h1>
           <p className="text-lg text-gray-400 leading-relaxed">
@@ -80,9 +81,9 @@ export default function LoginPage() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4 lg:hidden">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold">Spin Storey</span>
+              <span className="text-lg font-bold font-serif">Spin Storey</span>
             </div>
-            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2">Welcome back</h2>
+            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2 font-serif">Welcome back</h2>
             <p className="text-gray-600">Please enter your details to sign in to your account</p>
           </div>
 

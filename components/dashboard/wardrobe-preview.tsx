@@ -90,8 +90,8 @@ export function WardrobePreview({ items, onRefresh, isLoading }: WardrobePreview
               transition={{ duration: 0.3 }}
               className="space-y-3"
             >
-              <div className="grid max-h-[300px] grid-cols-5 gap-2 overflow-hidden">
-                {displayItems.map((item, index) => (
+              <div className="grid grid-cols-5 gap-2">
+                {displayItems.slice(0, 15).map((item, index) => (
                   <motion.div
                     key={item.id}
                     className="group relative aspect-square cursor-pointer overflow-hidden rounded-2xl border bg-muted transition-all hover:scale-105"
@@ -133,7 +133,7 @@ export function WardrobePreview({ items, onRefresh, isLoading }: WardrobePreview
                 ))}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{displayItems.length} items</span>
+                <span>{displayItems.length} items{displayItems.length > 15 ? ' (showing first 15)' : ''}</span>
                 <span>•</span>
                 <span>Updated just now</span>
               </div>

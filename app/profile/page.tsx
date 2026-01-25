@@ -268,7 +268,7 @@ export default function ProfilePage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+            <h1 className="text-3xl font-bold text-foreground font-serif">My Profile</h1>
             <p className="text-muted-foreground">Manage your account information and profile features</p>
           </div>
 
@@ -305,7 +305,7 @@ export default function ProfilePage() {
                       <AvatarFallback className="text-lg">{getInitials(user.fullName)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-lg font-semibold">{user.fullName}</h3>
+                      <h3 className="text-lg font-semibold font-serif">{user.fullName}</h3>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export default function ProfilePage() {
                 <CardContent className="space-y-6">
                   {/* Physical Characteristics */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-foreground">Physical Characteristics</h4>
+                    <h4 className="text-sm font-medium text-foreground font-serif">Physical Characteristics</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="height">Height (cm)</Label>
@@ -534,7 +534,7 @@ export default function ProfilePage() {
 
                   {/* Style Preferences */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-foreground">Style Preferences</h4>
+                    <h4 className="text-sm font-medium text-foreground font-serif">Style Preferences</h4>
                     
                     {/* Wears Most */}
                     <div className="space-y-2">
@@ -665,7 +665,7 @@ export default function ProfilePage() {
                 <CardContent className="space-y-6">
                   {/* Change Password Section */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-foreground flex items-center">
+                    <h4 className="text-sm font-medium text-foreground flex items-center font-serif">
                       <Lock className="h-4 w-4 mr-2" />
                       Change Password
                     </h4>

@@ -46,7 +46,7 @@ export default function OutfitPlannerPage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <motion.p 
-            className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
+            className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground font-serif"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
@@ -54,7 +54,7 @@ export default function OutfitPlannerPage() {
             Outfit planner
           </motion.p>
           <motion.h1 
-            className="text-2xl font-semibold text-foreground"
+            className="text-2xl font-semibold text-foreground font-serif"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}

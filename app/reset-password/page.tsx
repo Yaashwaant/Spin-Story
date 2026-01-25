@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Password updated!</h2>
+          <h2 className="text-2xl font-bold mb-2 font-serif">Password updated!</h2>
           <a href="/login" className="text-primary hover:underline">Sign in</a>
         </div>
       </div>
@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4">
-        <h2 className="text-xl font-bold">Set a new password</h2>
+        <h2 className="text-xl font-bold font-serif">Set a new password</h2>
         <input
           type="password"
           placeholder="New password"

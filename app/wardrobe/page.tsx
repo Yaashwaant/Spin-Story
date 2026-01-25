@@ -19,7 +19,7 @@ export default function WardrobePage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <motion.h1 
-            className="text-xl font-semibold text-foreground"
+            className="text-xl font-semibold text-foreground font-serif"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}

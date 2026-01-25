@@ -46,13 +46,13 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">Spin Storey</h1>
-          <p className="text-muted-foreground">Your AI Wardrobe Assistant</p>
+          <h1 className="text-3xl font-bold font-serif">Spin Storey</h1>
+          <p className="text-muted-foreground font-serif">Your AI Wardrobe Assistant</p>
         </div>
         
         <Card className="mx-auto max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl">Create Account</CardTitle>
+            <CardTitle className="text-2xl font-serif">Create Account</CardTitle>
             <CardDescription>
               Enter your details to create your account
             </CardDescription>
