@@ -198,18 +198,7 @@ export default function BdrDashboardPage() {
                         Upload Clothes
                       </Button>
                       <Button asChild className="rounded-2xl" size="sm">
-                        <Link
-                          href={{
-                            pathname: `/bdr/customers/${customer.id}`,
-                            query: { 
-                              name: customer.name,
-                              profile: JSON.stringify(customer.profile),
-                              preferences: JSON.stringify(customer.preferences),
-                              wardrobeUploaded: customer.wardrobeUploaded,
-                              outfitPlanCount: customer.outfitPlanCount
-                            },
-                          }}
-                        >
+                        <Link href={`/bdr/customers/${customer.id}`}>
                           Enable Chatbot
                         </Link>
                       </Button>
