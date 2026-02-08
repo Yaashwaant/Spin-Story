@@ -1,0 +1,14 @@
+# Query: 2026 Spin Story Inc.
+# ContextLines: 1
+
+2 results - 2 files
+
+app/login/page.tsx:
+  73          <div className="relative z-10 text-gray-500 text-sm">
+  74:           © 2026 Spin Story
+  75          </div>
+
+components/informative/Footer.tsx:
+  24            <div className="text-muted-foreground text-xs">
+  25:             © 2026 Spin Story  All rights reserved.
+  26            </div>

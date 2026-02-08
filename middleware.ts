@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 // Define routes that are accessible without authentication
 const publicRoutes = [
+  "/", // Root path for informative website
   "/login", 
   "/signup", 
   "/forgot-password", 
@@ -18,8 +19,12 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-  const isBdrRoute = bdrRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+  const isBdrRoute = bdrRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
 
   // If user is NOT authenticated
   if (!token) {

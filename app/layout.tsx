@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Playfair_Display } from "next/font/google"
 import { AuthProvider } from "@/components/auth/auth-provider"
+import { RouteAwareLayout } from "@/components/layout/route-aware-layout"
 
 const playfairDisplay = Playfair_Display({ 
   subsets: ["latin"],
@@ -11,7 +12,7 @@ const playfairDisplay = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: "Spin Storey - Your AI Wardrobe Assistant",
+  title: "Spin Story - Your AI Wardrobe Assistant",
   description: "AI-powered wardrobe management and outfit recommendations",
   generator: "v0.app",
   icons: {
@@ -42,7 +43,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${playfairDisplay.className} bg-slate-50 text-slate-950 antialiased`}>
         <AuthProvider>
-          {children}
+          <RouteAwareLayout className="min-h-screen">
+            {children}
+          </RouteAwareLayout>
         </AuthProvider>
       </body>
     </html>

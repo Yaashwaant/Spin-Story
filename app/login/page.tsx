@@ -57,7 +57,7 @@ export default function LoginPage() {
             <div className="w-6 h-6 bg-white rounded-full relative">
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-0.5 bg-black" />
             </div>
-            <span className="text-xl font-bold tracking-tight font-serif">Spin Storey</span>
+            <span className="text-xl font-bold tracking-tight font-serif">Spin Story</span>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 text-gray-500 text-sm">
-          © 2026 Spin Storey Inc.
+          © 2026 Spin Story 
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4 lg:hidden">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold font-serif">Spin Storey</span>
+              <span className="text-lg font-bold font-serif">Spin Story</span>
             </div>
             <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2 font-serif">Welcome back</h2>
             <p className="text-gray-600">Please enter your details to sign in to your account</p>

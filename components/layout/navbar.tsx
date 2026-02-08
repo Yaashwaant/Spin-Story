@@ -40,7 +40,7 @@ export function Navbar() {
         <div className="flex h-20 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold font-serif">Spin Storey</span>
+            <span className="text-xl font-bold font-serif">Spin Story</span>
           </Link>
 
           <nav className="hidden items-center gap-2 md:flex">
