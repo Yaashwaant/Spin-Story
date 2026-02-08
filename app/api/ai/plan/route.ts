@@ -150,38 +150,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
     }
 
-    // Fetch customer's wardrobe items
     let wardrobeItems: any[] = []
-    if (wardrobeUploaded) {
-      // Use provided wardrobe items from request if available
-      if (requestWardrobeItems && requestWardrobeItems.length > 0) {
-        wardrobeItems = requestWardrobeItems
-        console.log(`Using ${wardrobeItems.length} wardrobe items from request body`)
-      } else if (customerId) {
-        // Otherwise fetch from Firestore
-        try {
-          const wardrobeSnapshot = await adminDb
-            .collection('wardrobe')
-            .where('customerId', '==', customerId)
-            .get()
-          
-          wardrobeItems = wardrobeSnapshot.docs.map(doc => {
-            const data = doc.data()
-            return {
-              id: doc.id,
-              name: data.name || '',
-              image: data.image || '',
-              type: data.type || '',
-              color: data.color || '',
-              season: data.season || '',
-              styles: data.styles || [],
-            }
-          })
-          console.log(`Found ${wardrobeItems.length} wardrobe items for customer ${customerId} in plan API`)
-        } catch (wardrobeError) {
-          console.error("Error fetching wardrobe items:", wardrobeError)
-          // Continue without wardrobe data if fetch fails
-        }
+    if (requestWardrobeItems && requestWardrobeItems.length > 0) {
+      wardrobeItems = requestWardrobeItems
+    } else if (customerId) {
+      try {
+        const wardrobeSnapshot = await adminDb.collection("wardrobe").where("customerId", "==", customerId).get()
+
+        wardrobeItems = wardrobeSnapshot.docs.map((doc) => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            name: data.name || "",
+            image: data.image || "",
+            type: data.type || "",
+            color: data.color || "",
+            season: data.season || "",
+            styles: data.styles || [],
+          }
+        })
+      } catch (wardrobeError) {
+        console.error("Error fetching wardrobe items:", wardrobeError)
       }
     }
 
@@ -291,13 +280,10 @@ Day -1 | Travel Prep - Comfortable leggings, Oversized sweater | For packing and
       updatedAt: new Date().toISOString()
     }
     
-    // Save the structured plan to Firestore
     try {
       await adminDb.collection('outfitPlans').doc(planId).set(planData)
-      console.log(`Saved structured outfit plan ${planId} for customer ${customerId}`)
     } catch (saveError) {
       console.error("Error saving plan to Firestore:", saveError)
-      // Continue even if save fails - we still have the preview
     }
 
     return NextResponse.json({

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CustomerUploadModal } from "@/components/bdr/customer-upload-modal"
 import { Plus } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+
 
 type ChatRole = "user" | "bdr" | "assistant"
 
@@ -39,82 +38,27 @@ interface CustomerChatPanelProps {
   outfitPlanCount?: number
 }
 
-function normalizeMarkdown(content: string): string {
-  const withLists = content
-    .replace(/:\s*(\d+\.)\s+/g, ":\n\n$1 ")
-    .replace(/\s(\d+\.)\s+/g, "\n$1 ")
-  return withLists.trim()
-}
 
-const markdownComponents = {
-  a: (props: any) => (
-    <a
-      href={props.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="font-medium underline underline-offset-2 hover:no-underline font-serif"
-    >
-      {props.children}
-    </a>
-  ),
-  p: (props: any) => <p className="leading-relaxed whitespace-pre-wrap">{props.children}</p>,
-  ul: (props: any) => <ul className="list-disc pl-5 space-y-1">{props.children}</ul>,
-  ol: (props: any) => <ol className="list-decimal pl-5 space-y-1">{props.children}</ol>,
-  li: (props: any) => <li className="leading-relaxed">{props.children}</li>,
-  table: (props: any) => (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full border-collapse border border-border/60 rounded-lg overflow-hidden">
-        {props.children}
-      </table>
-    </div>
-  ),
-  thead: (props: any) => <thead className="bg-muted/40">{props.children}</thead>,
-  th: (props: any) => (
-    <th className="px-3 py-2 text-left font-semibold border border-border/60 align-top font-serif">
-      {props.children}
-    </th>
-  ),
-  td: (props: any) => (
-    <td className="px-3 py-2 border border-border/60 align-top whitespace-pre-wrap">
-      {props.children}
-    </td>
-  ),
-  h1: (props: any) => <h1 className="text-base font-semibold font-serif">{props.children}</h1>,
-  h2: (props: any) => <h2 className="text-sm font-semibold font-serif">{props.children}</h2>,
-  h3: (props: any) => <h3 className="text-sm font-semibold font-serif">{props.children}</h3>,
-  strong: (props: any) => <strong className="font-semibold font-serif">{props.children}</strong>,
-  em: (props: any) => <em className="italic">{props.children}</em>,
-}
 
-function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
-  if (!markdown || !markdown.includes("|")) {
+
+
+function parseTableToHtml(markdown: string, wardrobeItems: any[] = [], createItemLink?: (text: string) => string): string {
+  if (!markdown) {
     return markdown
   }
 
-  const lines = markdown.split("\n")
+  let processedContent = markdown
+  if (createItemLink) {
+    processedContent = createItemLink(markdown)
+  }
+
+  if (!processedContent.includes("|")) {
+    return processedContent
+  }
+
+  const lines = processedContent.split("\n")
   let html = ""
   let inTable = false
-
-  // Helper function to create clickable item links
-  const createItemLink = (text: string): string => {
-    // Look for wardrobe item names in the text
-    let modifiedText = text
-    
-    wardrobeItems.forEach(item => {
-      if (item.name && item.image) {
-        // Create a regex to match the item name (case insensitive)
-        const escapedName = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const regex = new RegExp(`\\b${escapedName}\\b`, 'gi')
-        
-        // Replace matches with clickable links
-        modifiedText = modifiedText.replace(regex, 
-          `<a href="${item.image}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-medium font-serif">${item.name}</a>`
-        )
-      }
-    })
-    
-    return modifiedText
-  }
 
   for (const line of lines) {
     const trimmedLine = line.trim()
@@ -142,9 +86,8 @@ function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
       if (cells.length > 0) {
         html += '    <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">\n'
         cells.forEach((cell) => {
-          // Process cell content to add item links
-          const processedCell = createItemLink(cell)
-          html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${processedCell}</td>\n`
+          // Cell content is already processed with createItemLink
+          html += `      <td class="px-3 py-2 text-gray-800 border border-gray-300">${cell}</td>\n`
         })
         html += "    </tr>\n"
       }
@@ -167,10 +110,6 @@ function parseTableToHtml(markdown: string, wardrobeItems: any[] = []): string {
 }
 
 export function CustomerChatPanel({ customerId, customerName, customerProfile, customerPreferences, wardrobeUploaded, outfitPlanCount }: CustomerChatPanelProps) {
-  // Debug logging
-  console.log("CustomerChatPanel - customerId:", customerId)
-  console.log("CustomerChatPanel - customerName:", customerName)
-  
   const [activeTab, setActiveTab] = useState<"general" | "plan">("plan")
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
@@ -178,26 +117,23 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
   const [wardrobeItems, setWardrobeItems] = useState<any[]>([])
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
 
-  // Fetch wardrobe items and preload customer context on mount
   useEffect(() => {
     const fetchWardrobeAndLoadContext = async () => {
-      // Fetch wardrobe items if wardrobe is uploaded
-      if (wardrobeUploaded && customerId) {
+      if (customerId) {
         try {
           const response = await fetch(`/api/wardrobe?customerId=${customerId}`)
           if (response.ok) {
             const data = await response.json()
             setWardrobeItems(data.items || [])
-            console.log(`Loaded ${data.items?.length || 0} wardrobe items for customer ${customerId}`)
           } else {
-            console.error("Failed to fetch wardrobe items:", response.status)
+            setWardrobeItems([])
           }
         } catch (error) {
           console.error("Error fetching wardrobe items:", error)
+          setWardrobeItems([])
         }
       }
 
-      // Load customer context
       if (customerProfile || customerPreferences || wardrobeUploaded !== undefined || outfitPlanCount !== undefined) {
         const contextMessage: ChatMessage = {
           id: crypto.randomUUID(),
@@ -217,6 +153,156 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
   const [planNotes, setPlanNotes] = useState("")
   const [lastPlan, setLastPlan] = useState<PlanResponse | null>(null)
   const [planning, setPlanning] = useState(false)
+
+  const linkReplacements = useMemo(() => {
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;")
+
+    const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+    const tokenize = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, " ")
+        .replace(/[_-]+/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+
+    const pickPrimaryColor = (item: any) => {
+      const source = typeof item?.color === "string" ? item.color : typeof item?.name === "string" ? item.name : ""
+      const tokens = tokenize(source)
+      const common = new Set([
+        "white",
+        "black",
+        "blue",
+        "navy",
+        "teal",
+        "green",
+        "red",
+        "maroon",
+        "pink",
+        "purple",
+        "brown",
+        "beige",
+        "cream",
+        "grey",
+        "gray",
+        "orange",
+        "yellow",
+      ])
+      return tokens.find((t) => common.has(t)) || ""
+    }
+
+    const stopwords = new Set([
+      "classic",
+      "minimalist",
+      "crew",
+      "neck",
+      "regular",
+      "fit",
+      "oversized",
+      "slim",
+      "tailored",
+      "formal",
+      "casual",
+      "vintage",
+      "modern",
+      "leather",
+      "denim",
+    ])
+
+    const replacements: Array<{ regex: RegExp; html: string; key: string }> = []
+    const seen = new Set<string>()
+
+    // Debug: Log wardrobe items with images for troubleshooting
+    console.log(`Processing ${wardrobeItems.length} wardrobe items for link creation`)
+
+    for (const item of wardrobeItems) {
+      const name = typeof item?.name === "string" ? item.name.trim() : ""
+      const image = typeof item?.image === "string" ? item.image.trim() : ""
+      
+      // Debug: Log items that are being skipped
+      if (!name) {
+        console.log(`Skipping item: No valid name`, item)
+        continue
+      }
+      if (!image) {
+        console.log(`Skipping item "${name}": No valid image URL`, item)
+        continue
+      }
+
+      // Validate image URL
+      const isValidUrl = image.startsWith('http://') || image.startsWith('https://')
+      if (!isValidUrl) {
+        console.log(`Skipping item "${name}": Invalid image URL format: ${image}`)
+        continue
+      }
+
+      console.log(`Creating link for "${name}" with image URL: ${image}`)
+
+      const safeName = escapeHtml(name)
+      const safeHref = escapeHtml(image)
+      
+      // Simple, clean link that opens the image
+      const html = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline font-medium font-serif">${safeName}</a>`
+
+      const addAlias = (alias: string) => {
+        const cleaned = alias.trim()
+        if (!cleaned) return
+        const key = cleaned.toLowerCase()
+        if (seen.has(key)) return
+        seen.add(key)
+        const regex = new RegExp(`\\b${escapeRegex(cleaned)}\\b`, "gi")
+        replacements.push({ regex, html, key })
+      }
+
+      addAlias(name)
+
+      const nameTokens = tokenize(name)
+      const lastWord = nameTokens[nameTokens.length - 1] || ""
+      const primaryColor = pickPrimaryColor(item)
+      if (primaryColor && lastWord) {
+        addAlias(`${primaryColor} ${lastWord}`)
+      }
+
+      const filtered = nameTokens.filter((t) => !stopwords.has(t))
+      if (filtered.length >= 2) {
+        const filteredAlias = filtered.join(" ")
+        if (filteredAlias.toLowerCase() !== name.toLowerCase()) {
+          addAlias(filteredAlias)
+        }
+      }
+    }
+
+    replacements.sort((a, b) => b.key.length - a.key.length)
+    return replacements
+  }, [wardrobeItems])
+
+  const createItemLink = (text: string): string => {
+    console.log(`createItemLink input: "${text}"`)
+    console.log(`Available replacements: ${linkReplacements.length}`)
+    
+    let modifiedText = text
+    let replacementCount = 0
+    
+    for (const rep of linkReplacements) {
+      const matches = modifiedText.match(rep.regex)
+      if (matches) {
+        console.log(`Found match for "${rep.key}": ${matches.length} occurrences`)
+        replacementCount += matches.length
+      }
+      modifiedText = modifiedText.replace(rep.regex, rep.html)
+    }
+    
+    console.log(`createItemLink output: "${modifiedText}" (${replacementCount} replacements made)`)
+    return modifiedText
+  }
 
   const handleSendGeneral = async () => {
     if (!input.trim()) return
@@ -256,8 +342,6 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
         outfitPlanCount,
         wardrobeItems,
       }
-      console.log("Sending chat request:", JSON.stringify(requestBody, null, 2))
-      
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -267,8 +351,8 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
       if (!res.ok) {
         const errorText = await res.text()
         console.error("API error response:", res.status, errorText)
-        throw new Error(`Failed to get AI response: ${res.status} ${errorText}`)
       }
+
 
       const data = (await res.json()) as { message: string }
 
@@ -282,7 +366,6 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
       setMessages((prev) => [...prev, aiMessage])
     } catch (error) {
       console.error("Chat API error:", error)
-      // Add a user-friendly error message
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -410,12 +493,16 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                                 : "max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-primary text-primary-foreground"
                             }
                           >
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={markdownComponents}
-                            >
-                              {msg.role === "assistant" ? normalizeMarkdown(msg.content) : msg.content}
-                            </ReactMarkdown>
+                            {msg.role === "assistant" ? (
+                              <div 
+                                dangerouslySetInnerHTML={{
+                                  __html: parseTableToHtml(msg.content, wardrobeItems, createItemLink)
+                                }}
+                                className="prose prose-sm max-w-none"
+                              />
+                            ) : (
+                              <div className="whitespace-pre-wrap">{msg.content}</div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -534,7 +621,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                           Plan preview
                         </p>
                         <div className="text-sm text-foreground">
-                          <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(lastPlan.preview, wardrobeItems) }} />
+                          <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(lastPlan.preview, wardrobeItems, createItemLink) }} />
                         </div>
                       </div>
                     ) : (

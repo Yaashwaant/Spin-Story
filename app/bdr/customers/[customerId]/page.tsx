@@ -9,7 +9,6 @@ interface BdrCustomerPageProps {
 
 async function getCustomer(customerId: string) {
   try {
-    // Import the admin SDK directly to fetch customer data
     const { adminDb } = await import("@/lib/firebase-admin")
     
     const customerDoc = await adminDb.collection("users").doc(customerId).get()
@@ -31,10 +30,8 @@ async function getCustomer(customerId: string) {
       updatedAt?: unknown
     }
 
-    // Try to get a meaningful name from multiple sources
     let customerName = data.name || data.fullName || ""
     
-    // If no name is found, create one from contact info
     if (!customerName || customerName === "Unknown user") {
       const contact = data.contactNumber || data.phoneNumber || ""
       if (contact) {
@@ -76,10 +73,6 @@ export default async function BdrCustomerPage({ params }: BdrCustomerPageProps) 
       </div>
     )
   }
-  
-  // Debug logging
-  console.log("BdrCustomerPage - customerId:", customerId)
-  console.log("BdrCustomerPage - customer:", customer)
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,4 +101,3 @@ export default async function BdrCustomerPage({ params }: BdrCustomerPageProps) 
     </div>
   )
 }
-

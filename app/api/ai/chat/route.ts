@@ -8,7 +8,6 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  console.log("Chat API received body:", JSON.stringify(body, null, 2))
   
   const customerId = body.customerId as string | undefined
   const role = body.role as string | undefined
@@ -20,10 +19,7 @@ export async function POST(req: NextRequest) {
   const outfitPlanCount = body.outfitPlanCount as number | undefined
   const frontendWardrobeItems = body.wardrobeItems as any[] | undefined
 
-  console.log("Chat API extracted values:", { customerId, role, intent, message, hasProfile: !!customerProfile, hasPreferences: !!customerPreferences, wardrobeUploaded, outfitPlanCount, hasFrontendWardrobeItems: !!frontendWardrobeItems })
-
   if (!customerId || customerId === "unknown" || !role || !intent || !message) {
-    console.log("Chat API validation failed - missing required fields:", { customerId, role, intent, message })
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
@@ -46,8 +42,7 @@ export async function POST(req: NextRequest) {
         styles: item.styles || [],
         image: item.image || ''
       }))
-      console.log(`Using ${wardrobeItems.length} wardrobe items from frontend for customer ${customerId}`)
-    } else if (wardrobeUploaded && customerId) {
+    } else if (customerId) {
       // Fallback: fetch from database if frontend data not available
       try {
         const wardrobeSnapshot = await adminDb
@@ -67,7 +62,6 @@ export async function POST(req: NextRequest) {
             image: data.image || ''
           }
         })
-        console.log(`Found ${wardrobeItems.length} wardrobe items for customer ${customerId}`)
       } catch (wardrobeError) {
         console.error("Error fetching wardrobe items:", wardrobeError)
         // Continue without wardrobe data if fetch fails
@@ -196,4 +190,3 @@ Always maintain a helpful and consultative tone. Reference the customer's profil
     return NextResponse.json({ error: "Failed to generate AI response" }, { status: 500 })
   }
 }
-
