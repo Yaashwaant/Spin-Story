@@ -49,6 +49,11 @@ export function middleware(request: NextRequest) {
     if (pathname === "/bdr/login") {
       return NextResponse.redirect(new URL("/bdr", request.url));
     }
+    
+    // Allow authenticated users to access BDR customer pages
+    if (pathname.startsWith("/bdr/customers/")) {
+      return NextResponse.next();
+    }
   }
 
   return NextResponse.next();
@@ -64,6 +69,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public assets like images in public folder
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\.(?:jpg|jpeg|gif|png|svg|ico|webp)$).*)",
   ],
 };

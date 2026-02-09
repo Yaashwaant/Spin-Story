@@ -194,7 +194,12 @@ export async function POST(req: NextRequest) {
     }
     
     if (wardrobeItems.length > 0) {
-      customerContext.push(`Current Wardrobe Items (${wardrobeItems.length} items):\n${JSON.stringify(wardrobeItems, null, 2)}`)
+      const wardrobeSummary = wardrobeItems.map((item) => 
+        `- ${item.name} (${item.type || item.category || 'clothing'}, ${item.color || 'various colors'}, ${item.season || 'all seasons'})`
+      ).join('\n')
+      customerContext.push(
+        `CURRENT WARDROBE INVENTORY (${wardrobeItems.length} items):\n${wardrobeSummary}\n\nIMPORTANT: You can ONLY use these specific items when making outfit suggestions in the Outfit column. Do not invent new clothing items that are not listed here.`
+      )
     }
 
     const planPrompt = `You are a professional AI stylist creating personalized outfit plans for customers.
@@ -215,12 +220,14 @@ Create a detailed outfit plan that includes:
 
 IMPORTANT WARDROBE AWARENESS RULES:
 - PRIORITIZE using items from the customer's existing wardrobe for outfit suggestions
-- ONLY suggest purchasing new items if they don't already own suitable alternatives
-- For each outfit suggestion, specify which items from their wardrobe to use
-- If suggesting new purchases, explain why existing items aren't suitable
-- If no suitable items exist for a specific outfit, clearly state: "You don't currently have suitable items in your wardrobe for this outfit"
+- Aim to provide COMPLETE outfits with AT LEAST 3 categories: TOP + BOTTOM + FOOTWEAR from existing wardrobe whenever possible
+- The Outfit column MUST ONLY contain items that come from the current wardrobe inventory listed above. Do NOT include any new or imaginary items in the Outfit column.
+- ONLY suggest new purchase ideas in the "Extra Notes" column, always paired with the best matching existing outfit combination
+- If the wardrobe does not have enough items to build a fully complete outfit, still create the best possible outfit using available items and clearly mention missing categories in the "Extra Notes" column
+- NEVER skip a day or output placeholders like "[SKIP]" or "No suitable outfit" – always suggest at least one outfit using the available wardrobe
 - Reference specific wardrobe items by name and color when creating combinations
 - USE EXACT ITEM NAMES from the wardrobe list to ensure proper linking to item photos
+- Focus on creating practical, wearable outfits that work with what they already own
 
 Be specific, practical, and consider the customer's profile, preferences, and existing wardrobe. Make sure the plan is actionable and easy to follow.
 
@@ -229,13 +236,16 @@ CRITICAL OUTPUT FORMAT REQUIREMENT:
 - Use flexible day numbering: Day 1, Day 2, Day 3 OR Day -1, Day -2, Day 0, Day 5, etc. OR Monday, Tuesday, Wednesday OR specific dates - whatever makes sense for the context
 - The table should be the ONLY content in your response - NO additional text, explanations, or sections
 - Each row should represent one outfit with all necessary details
+- In the Outfit column, list only items taken from the CURRENT WARDROBE INVENTORY above. Any potential new purchases must be described only in the Extra Notes column.
 - Use simple, clear language in table cells
 - Example format (THIS IS YOUR ENTIRE RESPONSE):
 Day | Outfit | Extra Notes
-Day 1 | Office Professional - White shirt, Navy blazer, Black trousers | Perfect for business meetings, polished look
-Day 2 | Casual Chic - Denim jacket, White tee, Dark jeans | Comfortable yet stylish for client visits
-Day 3 | Evening Dinner - Black dress, Heels, Statement necklace | Elegant look for dinner dates
-Day -1 | Travel Prep - Comfortable leggings, Oversized sweater | For packing and preparation day
+Day 1 | Office Professional - White button-down shirt, Navy tailored trousers, Black leather loafers | Perfect for business meetings. Add navy blazer for extra polish
+Day 2 | Casual Friday - Light blue denim shirt, Dark wash jeans, White sneakers | Comfortable yet put-together for relaxed office day
+Day 3 | Weekend Brunch - Floral blouse, Beige chinos, Brown ankle boots | Fresh spring look. Layer with cardigan if chilly
+Day 4 | Evening Out - Black silk top, Grey dress pants, Black heels | Sophisticated dinner look. Add statement earrings
+Day 5 | Minimal Wardrobe Day - White tee, Dark jeans | Best possible outfit with current wardrobe. Missing dedicated footwear; customer can consider adding simple white sneakers to enhance this look
+Day -1 | Travel Day - Oversized sweater, Black leggings, Comfortable flats | Airport-friendly outfit with easy layers
 
 **IMPORTANT: DO NOT ADD ANY TEXT BEFORE OR AFTER THE TABLE**
 - Include ALL details (color coordination, style recommendations, practical considerations, mix-and-match options, budget considerations) WITHIN the table cells

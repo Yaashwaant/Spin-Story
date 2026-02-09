@@ -381,6 +381,17 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
   const handleGeneratePlan = async () => {
     if (!planNotes.trim()) return
 
+    // If there are no wardrobe items, do not generate a generic plan.
+    // Instead, show a clear message asking to upload clothes first.
+    if (!wardrobeItems || wardrobeItems.length === 0) {
+      setLastPlan({
+        planId: "",
+        preview:
+          "To generate a personalized outfit plan, please upload at least one item to the wardrobe for this customer.",
+      })
+      return
+    }
+
     setPlanning(true)
     setLastPlan(null)
 
