@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import chromium from "@sparticuz/chromium"
 import puppeteer from "puppeteer"
 import { adminDb } from "@/lib/firebase-admin"
 
@@ -1011,11 +1012,20 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
+    // Generate PDF using Puppeteer with serverless-compatible Chromium
+    const browser = await puppeteer.launch(
+      process.env.NODE_ENV === 'production' 
+        ? {
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+          }
+        : {
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+          }
+    )
     
     const page = await browser.newPage()
     

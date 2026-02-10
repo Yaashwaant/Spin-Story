@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "app/api/plans/[planId]/pdf/route.ts": {
+      "maxDuration": 30,
+      "memory": 3008
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
