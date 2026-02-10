@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`${playfairDisplay.className} bg-slate-50 text-slate-950 antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${playfairDisplay.className} bg-slate-50 text-slate-950 antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <RouteAwareLayout className="min-h-screen">
             {children}

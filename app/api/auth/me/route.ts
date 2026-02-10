@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserById, updateUser } from "@/lib/auth";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken } from "@/lib/auth-edge";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     
     if (!decoded) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     
     if (!decoded) {
       return NextResponse.json(

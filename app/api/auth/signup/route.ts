@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { signUpSchema } from "@/models/auth";
-import { createUser } from "@/lib/auth";
+import { createUser } from "@/lib/auth-edge";
 import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
@@ -76,8 +76,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Handle specific Firebase errors
+    if (error instanceof Error) {
+      if (error.message.includes("already exists")) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 409 }
+        );
+      }
+      
+      // Return the actual error message for better debugging
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "An unexpected error occurred. Please try again." },
       { status: 500 }
     );
   }

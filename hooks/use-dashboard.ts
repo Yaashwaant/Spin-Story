@@ -6,6 +6,13 @@ export interface DashboardData {
     fullName: string;
     email: string;
     onboarded: boolean;
+    profile?: {
+      aiExtractedTraits?: {
+        stylingAdvice?: string;
+        [key: string]: any;
+      };
+      [key: string]: any;
+    };
   };
   stats: {
     totalItems: number;
@@ -57,7 +64,16 @@ export function useDashboard() {
       }
 
       const result = await response.json();
-      setData(result.data);
+      const { userData, ...restData } = result.data;
+      
+      setData({
+        ...restData,
+        user: userData || {
+          fullName: "User",
+          email: "",
+          onboarded: false,
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

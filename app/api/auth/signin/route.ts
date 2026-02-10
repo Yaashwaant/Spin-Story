@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/models/auth";
-import { authenticateUser } from "@/lib/auth";
+import { authenticateAndGenerateToken } from "@/lib/auth-edge";
 import { z } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     
     const validatedData = signInSchema.parse(body);
     
-    const result = await authenticateUser(validatedData.emailOrPhone, validatedData.password);
+    const result = await authenticateAndGenerateToken(validatedData.emailOrPhone, validatedData.password);
     
     if (!result) {
       return NextResponse.json(

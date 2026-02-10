@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadProfilePhoto, compressImage } from "@/lib/upload-profile-photo";
 import { profileSchema, preferencesSchema, type Profile, type Preferences } from "@/models/user";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const wearsMostOptions = ["Tops", "Bottoms", "Ethnic", "Western", "Sportswear"];
 const dressingPurposeOptions = ["work", "casual", "party", "travel", "wedding"];
@@ -25,6 +27,7 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [stylingAdvice, setStylingAdvice] = useState<string>("");
 
   // Handle redirect logic properly
   useEffect(() => {
@@ -89,6 +92,13 @@ export default function OnboardingPage() {
 
   const handleSave = async () => {
     try {
+      // If styling advice is already displayed, just redirect to dashboard
+      if (stylingAdvice) {
+        setIsRedirecting(true);
+        router.push("/dashboard");
+        return;
+      }
+      
       // Validate form first
       if (!validateForm()) {
         return;
@@ -102,25 +112,20 @@ export default function OnboardingPage() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for analysis
 
-        // Convert files to base64
-        let faceBase64 = "";
-        let bodyBase64 = "";
-
-        // Compress images before converting to base64 to avoid huge payloads
+        // Send files directly using FormData (no base64 conversion needed)
+        const formData = new FormData();
         if (faceFile) {
-          const compressedFace = await compressImage(faceFile);
-          faceBase64 = await fileToBase64(compressedFace);
+          formData.append('facePhoto', faceFile);
         }
         if (bodyFile) {
-          const compressedBody = await compressImage(bodyFile);
-          bodyBase64 = await fileToBase64(compressedBody);
+          formData.append('fullBodyPhoto', bodyFile);
         }
 
         const aiResponse = await fetch("/api/ai/analyze-profile", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ facePhoto: faceBase64, fullBodyPhoto: bodyBase64 }),
+          body: formData,
           signal: controller.signal
+          // Note: Don't set Content-Type header for FormData - browser sets it automatically
         });
         
         clearTimeout(timeoutId);
@@ -129,15 +134,27 @@ export default function OnboardingPage() {
           const aiData = await aiResponse.json();
           if (aiData.success && aiData.traits) {
             aiTraits = aiData.traits;
+            // Display styling advice if available
+            if (aiData.traits.stylingAdvice) {
+              setStylingAdvice(aiData.traits.stylingAdvice);
+              // Don't redirect immediately - let user see the advice
+              setSubmitting(false);
+              return;
+            }
           } else {
             throw new Error("AI analysis returned invalid data");
           }
         } else {
-          throw new Error("AI analysis failed");
+          const errorData = await aiResponse.json().catch(() => ({ error: "Analysis failed" }));
+          throw new Error(errorData.details || errorData.error || "AI analysis failed");
         }
       } catch (aiError) {
         console.error("AI analysis failed or timed out:", aiError);
-        alert("Failed to analyze photos. Please upload clearer photos and try again.");
+        const errorMessage = aiError instanceof Error ? aiError.message : "Failed to analyze photos";
+        alert(errorMessage.includes("Unable to analyze photo") 
+          ? errorMessage + "\n\nPlease upload a different and clear photo of yourself."
+          : "Failed to analyze photos. Please upload clearer photos and try again."
+        );
         setSubmitting(false);
         return; // Stop execution, don't save profile
       }
@@ -450,9 +467,52 @@ export default function OnboardingPage() {
               </div>
             </div>
 
+            {/* Display styling advice if available */}
+            {stylingAdvice && (
+              <div className="p-4 border rounded-xl bg-green-50">
+                <h3 className="text-lg font-semibold mb-3 text-green-800">Your Personalized Styling Advice</h3>
+                <div className="prose prose-sm max-w-none text-green-900">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => (
+                        <p className="mb-3 last:mb-0 leading-relaxed text-green-900">{children}</p>
+                      ),
+                      strong: ({ children }) => (
+                        <strong className="font-semibold text-green-800">{children}</strong>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc pl-6 space-y-1 mb-3 text-green-900">{children}</ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="list-decimal pl-6 space-y-1 mb-3 text-green-900">{children}</ol>
+                      ),
+                      li: ({ children }) => (
+                        <li className="leading-relaxed text-green-900">{children}</li>
+                      ),
+                      h1: ({ children }) => (
+                        <h1 className="text-xl font-bold mb-3 mt-4 text-green-900">{children}</h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="text-lg font-semibold mb-2 mt-3 text-green-900">{children}</h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="text-base font-semibold mb-2 mt-2 text-green-900">{children}</h3>
+                      ),
+                    }}
+                  >
+                    {stylingAdvice}
+                  </ReactMarkdown>
+                </div>
+                <p className="text-sm text-green-700 mt-3">
+                  This advice has been saved to your profile and will be available on your dashboard.
+                </p>
+              </div>
+            )}
+
             {/* Submit */}
             <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
-              {submitting ? "Analyzing & Saving Profile..." : "Complete Profile"}
+              {submitting ? "Analyzing & Saving Profile..." : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
             </Button>
           </CardContent>
         </Card>

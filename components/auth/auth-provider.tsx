@@ -32,6 +32,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const fetchUser = async () => {
+    // Skip auth check for public routes to avoid unnecessary API calls
+    const publicRoutes = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/bdr/login"];
+    const isPublicRoute = publicRoutes.some(route => pathname === route || pathname?.startsWith(route + '/'));
+    
+    if (isPublicRoute) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/auth/me", {
         credentials: "include",
@@ -64,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [pathname]); // Re-fetch when pathname changes
 
   const signIn = async (emailOrPhone: string, password: string) => {
     const response = await fetch("/api/auth/signin", {
@@ -104,7 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || "Sign up failed");
+      
+      // Provide user-friendly error messages
+      let errorMessage = error.error || "Sign up failed";
+      
+      if (response.status === 409) {
+        errorMessage = error.error || "This email or phone number is already registered. Please try signing in instead.";
+      } else if (response.status === 400) {
+        errorMessage = error.error || "Please check your information and try again.";
+      } else if (response.status === 500) {
+        errorMessage = error.error || "Something went wrong on our end. Please try again in a moment.";
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
