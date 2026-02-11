@@ -587,14 +587,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                 </CardContent>
               </Card>
               <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Use this tab for quick questions and styling advice that you want to share with the customer.
-                </p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>Clarify which items from their wardrobe to prioritize.</li>
-                  <li>Ask for alternatives if some items are unavailable.</li>
-                  <li>Prepare how you will explain the plan to the customer.</li>
-                </ul>
+                
               </div>
             </div>
           </div>
