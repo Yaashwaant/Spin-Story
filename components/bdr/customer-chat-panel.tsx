@@ -675,51 +675,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                           Plan preview
                         </p>
                         <div className="text-sm text-foreground">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              h1: ({ children }) => (
-                                <h1 className="text-lg font-bold mb-3 mt-4 text-foreground">{children}</h1>
-                              ),
-                              h2: ({ children }) => (
-                                <h2 className="text-base font-semibold mb-2 mt-3 text-foreground">{children}</h2>
-                              ),
-                              h3: ({ children }) => (
-                                <h3 className="text-sm font-semibold mb-2 mt-2 text-foreground">{children}</h3>
-                              ),
-                              p: ({ children }) => (
-                                <p className="mb-3 last:mb-0 leading-relaxed text-foreground">{children}</p>
-                              ),
-                              strong: ({ children }) => (
-                                <strong className="font-semibold text-primary">{children}</strong>
-                              ),
-                              ul: ({ children }) => (
-                                <ul className="list-disc pl-6 space-y-1 mb-3 text-foreground">{children}</ul>
-                              ),
-                              ol: ({ children }) => (
-                                <ol className="list-decimal pl-6 space-y-1 mb-3 text-foreground">{children}</ol>
-                              ),
-                              li: ({ children }) => (
-                                <li className="leading-relaxed text-foreground">{children}</li>
-                              ),
-                              table: ({ children }) => (
-                                <table className="w-full border-collapse border border-border my-3 text-sm">{children}</table>
-                              ),
-                              th: ({ children }) => (
-                                <th className="border border-border px-3 py-2 bg-muted font-semibold text-foreground">{children}</th>
-                              ),
-                              td: ({ children }) => (
-                                <td className="border border-border px-3 py-2 text-foreground">{children}</td>
-                              ),
-                              blockquote: ({ children }) => (
-                                <blockquote className="border-l-4 border-primary pl-4 my-3 italic text-muted-foreground">
-                                  {children}
-                                </blockquote>
-                              ),
-                            }}
-                          >
-                            {lastPlan.preview}
-                          </ReactMarkdown>
+                          <div dangerouslySetInnerHTML={{ __html: parseTableToHtml(lastPlan.preview, wardrobeItems, createItemLink) }} />
                         </div>
                       </div>
                     ) : (
