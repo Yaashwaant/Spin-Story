@@ -114,6 +114,23 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // Fetch user profile data to include styling advice
+    let userData = null;
+    try {
+      const userDoc = await adminDb.collection("users").doc(userId).get();
+      if (userDoc.exists) {
+        const userDocData = userDoc.data();
+        userData = {
+          fullName: userDocData?.name || userDocData?.fullName || "User",
+          email: userDocData?.email || "",
+          onboarded: userDocData?.onboarded || false,
+          profile: userDocData?.profile || null,
+        };
+      }
+    } catch (error) {
+      console.log("User profile not found or error:", error);
+    }
+
     // Return wardrobe items immediately for faster preview load
     return NextResponse.json({
       data: {
@@ -121,7 +138,7 @@ export async function GET(req: NextRequest) {
         // Other data can be loaded later or on demand
         recentOutfits: [],
         savedOutfits: [],
-        userData: null, // Skip user data for faster response
+        userData: userData,
       },
       timestamp: Date.now(),
     });

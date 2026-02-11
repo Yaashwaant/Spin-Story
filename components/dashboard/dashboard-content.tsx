@@ -9,6 +9,7 @@ import { RecentOutfits } from "@/components/dashboard/recent-outfits";
 import { SavedOutfits } from "@/components/dashboard/saved-outfits";
 import { WardrobePreview } from "@/components/dashboard/wardrobe-preview";
 import { FindOutfitPanel } from "@/components/dashboard/find-outfit-panel";
+import { StylingAdvice } from "@/components/dashboard/styling-advice";
 
 export function DashboardContent() {
   const { data, isLoading, error, refreshData } = useDashboard();
@@ -65,6 +66,13 @@ export function DashboardContent() {
           Refresh
         </Button>
       </div>
+
+      {/* Display styling advice if available */}
+      {data.user.profile?.aiExtractedTraits?.stylingAdvice && (
+        <StylingAdvice 
+          advice={data.user.profile.aiExtractedTraits.stylingAdvice} 
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>

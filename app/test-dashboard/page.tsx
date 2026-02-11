@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function TestDashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -80,6 +82,46 @@ export default function TestDashboardPage() {
               <p><strong>Email:</strong> {dashboardData.user.email}</p>
               <p><strong>Onboarded:</strong> {dashboardData.user.onboarded ? "Yes" : "No"}</p>
             </div>
+
+            {/* Display styling advice if available */}
+            {dashboardData.user.profile?.aiExtractedTraits?.stylingAdvice && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4 text-green-800">Your Personalized Styling Advice</h2>
+                <div className="prose prose-sm max-w-none text-green-900">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => (
+                        <p className="mb-3 last:mb-0 leading-relaxed text-green-900">{children}</p>
+                      ),
+                      strong: ({ children }) => (
+                        <strong className="font-semibold text-green-800">{children}</strong>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc pl-6 space-y-1 mb-3 text-green-900">{children}</ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="list-decimal pl-6 space-y-1 mb-3 text-green-900">{children}</ol>
+                      ),
+                      li: ({ children }) => (
+                        <li className="leading-relaxed text-green-900">{children}</li>
+                      ),
+                      h1: ({ children }) => (
+                        <h1 className="text-xl font-bold mb-3 mt-4 text-green-900">{children}</h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="text-lg font-semibold mb-2 mt-3 text-green-900">{children}</h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="text-base font-semibold mb-2 mt-2 text-green-900">{children}</h3>
+                      ),
+                    }}
+                  >
+                    {dashboardData.user.profile.aiExtractedTraits.stylingAdvice}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Statistics</h2>

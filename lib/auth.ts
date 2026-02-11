@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { adminDb } from "./firebase-admin";
 import { userSchema, type User, convertFirebaseTimestampToDate } from "@/models/user";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -28,138 +27,119 @@ export function generateToken(user: AuthUser): string {
 
 export function verifyToken(token: string): AuthUser | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUser;
-  } catch {
+    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    return decoded;
+  } catch (error) {
+    console.error("Token verification failed:", error);
     return null;
   }
 }
 
-export async function createUser(data: {
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  password: string;
-}): Promise<{ user: User; token: string }> {
+// Server-side only functions - these should only be used in API routes
+let adminDb: any = null;
+
+// Lazy load Firebase Admin to prevent browser bundling issues
+async function getAdminDb() {
+  if (typeof window !== 'undefined') {
+    throw new Error('Firebase Admin can only be used server-side');
+  }
+  
+  if (!adminDb) {
+    try {
+      // Import the firebase-admin module
+      const adminModule = await import("@/lib/firebase-admin");
+      if (adminModule && adminModule.adminDb) {
+        adminDb = adminModule.adminDb;
+        console.log('✅ Firebase Admin loaded successfully');
+      } else {
+        throw new Error('Firebase Admin module not found or invalid');
+      }
+    } catch (error) {
+      console.error('Failed to load Firebase Admin:', error);
+      throw new Error(`Firebase Admin not available: ${error.message}`);
+    }
+  }
+  
+  return adminDb;
+}
+
+export async function createUser(data: any): Promise<User> {
+  const db = await getAdminDb();
   const hashedPassword = await hashPassword(data.password);
   
-  const userRef = adminDb.collection("users").doc();
+  const userRef = db.collection("users").doc();
   const now = new Date();
   
   const userData = {
     id: userRef.id,
-    fullName: data.fullName,
     email: data.email.toLowerCase(),
-    phoneNumber: data.phoneNumber,
+    fullName: data.fullName,
+    phoneNumber: data.phoneNumber || "",
     password: hashedPassword,
     role: "USER",
     onboarded: false,
-    emailVerified: false,
-    phoneVerified: false,
-    isActive: true,
     createdAt: now,
     updatedAt: now,
+    profile: data.profile || {},
+    preferences: data.preferences || {},
   };
 
   await userRef.set(userData);
   
-  const user = userSchema.parse(userData);
-  const token = generateToken({
-    id: user.id,
-    email: user.email,
-    fullName: user.fullName,
-    role: user.role,
-    onboarded: user.onboarded,
-  });
-
-  return { user, token };
+  return userSchema.parse(userData);
 }
 
-export async function authenticateUser(emailOrPhone: string, password: string): Promise<{ user: User; token: string } | null> {
+export async function authenticateUser(emailOrPhone: string, password: string): Promise<User | null> {
+  const db = await getAdminDb();
+  
   const isEmail = emailOrPhone.includes("@");
   const field = isEmail ? "email" : "phoneNumber";
   const value = isEmail ? emailOrPhone.toLowerCase() : emailOrPhone;
   
-  const userSnapshot = await adminDb
+  const userSnapshot = await db
     .collection("users")
     .where(field, "==", value)
     .limit(1)
     .get();
-
+  
   if (userSnapshot.empty) {
     return null;
   }
-
+  
   const userDoc = userSnapshot.docs[0];
   const userData = userDoc.data();
   
-  if (!userData.password) {
+  const isPasswordValid = await verifyPassword(password, userData.password);
+  if (!isPasswordValid) {
     return null;
   }
-
-  const isValidPassword = await verifyPassword(password, userData.password);
-  if (!isValidPassword) {
-    return null;
-  }
-
-  const user = userSchema.parse({
-    ...userData,
-    id: userDoc.id,
-  });
-
-  await userDoc.ref.update({ lastLoginAt: new Date() });
-
-  const token = generateToken({
-    id: user.id,
-    email: user.email,
-    fullName: user.fullName,
-    role: user.role,
-    onboarded: user.onboarded,
-  });
-
-  return { user, token };
+  
+  return userSchema.parse(userData);
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
-  const userDoc = await adminDb.collection("users").doc(userId).get();
+  const db = await getAdminDb();
+  
+  const userDoc = await db.collection("users").doc(userId).get();
   
   if (!userDoc.exists) {
     return null;
   }
-
-  const userData = userDoc.data();
   
-  // Convert Firebase timestamps to proper format
-  const processedData = {
-    ...userData,
-    id: userDoc.id,
-    createdAt: convertFirebaseTimestampToDate(userData?.createdAt),
-    updatedAt: convertFirebaseTimestampToDate(userData?.updatedAt),
-    lastLoginAt: userData?.lastLoginAt ? convertFirebaseTimestampToDate(userData.lastLoginAt) : undefined,
-  };
-
-  return userSchema.parse(processedData);
+  return userSchema.parse(userDoc.data());
 }
 
 export async function updateUser(userId: string, data: Partial<User>): Promise<User> {
-  const userRef = adminDb.collection("users").doc(userId);
+  const db = await getAdminDb();
+  
+  const userRef = db.collection("users").doc(userId);
   const updateData = {
     ...data,
     updatedAt: new Date(),
   };
-
+  
   await userRef.update(updateData);
   
-  const userDoc = await userRef.get();
-  const userData = userDoc.data();
-  
-  // Convert Firebase timestamps to proper format
-  const processedData = {
-    ...userData,
-    id: userDoc.id,
-    createdAt: convertFirebaseTimestampToDate(userData?.createdAt),
-    updatedAt: convertFirebaseTimestampToDate(userData?.updatedAt),
-    lastLoginAt: userData?.lastLoginAt ? convertFirebaseTimestampToDate(userData.lastLoginAt) : undefined,
-  };
-
-  return userSchema.parse(processedData);
+  const updatedDoc = await userRef.get();
+  return userSchema.parse(updatedDoc.data());
 }

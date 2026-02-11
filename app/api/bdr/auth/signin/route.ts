@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticateUser, generateToken } from "@/lib/auth";
+import { authenticateAndGenerateToken } from "@/lib/auth-edge";
 import { cookies } from "next/headers";
 
 const signInSchema = z.object({
@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = signInSchema.parse(body);
     
-    // Authenticate user
-    const authResult = await authenticateUser(validatedData.emailOrPhone, validatedData.password);
+    // Authenticate user and generate token
+    const authResult = await authenticateAndGenerateToken(validatedData.emailOrPhone, validatedData.password);
     
     if (!authResult) {
       return NextResponse.json(
@@ -35,14 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate JWT token
-    const token = generateToken({
-      id: authResult.user.id,
-      email: authResult.user.email,
-      fullName: authResult.user.fullName,
-      role: authResult.user.role,
-      onboarded: authResult.user.onboarded,
-    });
+    // Use the token from the authentication result
+    const token = authResult.token;
     
     // Set HTTP-only cookie
     (await cookies()).set("auth-token", token, {
