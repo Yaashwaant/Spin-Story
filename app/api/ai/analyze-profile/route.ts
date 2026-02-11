@@ -3,6 +3,8 @@ import OpenAI from "openai"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  timeout: 60000, // 60 seconds timeout for image analysis
+  maxRetries: 2, // Retry failed requests up to 2 times
 })
 
 // Helper function to generate personalized styling advice
@@ -191,12 +193,12 @@ Return structured JSON.
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a high-end personal stylist working with VIP fashion clients who charges $500/hour for styling advice.
-          
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `You are a high-end personal stylist working with VIP fashion clients who charges $500/hour for styling advice.
+              
 **Your Approach:**
 1. **Strategic Analysis**: Translate observations into strategic styling decisions
 2. **Harmonization**: Balance body proportions, coloring, personality energy, and lifestyle reality
@@ -219,15 +221,16 @@ Return structured JSON.
 - Focus on presence-building and memorable impact
 
 **Response Structure**: Create strategic styling recommendations that position the client for success in their personal and professional life.`
-        },
-        {
-          role: "user",
-          content: content
-        }
-      ],
-      max_tokens: 1200,
-      temperature: 0.3
-    })
+            },
+            {
+              role: "user",
+              content: content
+            }
+          ],
+          max_tokens: 1200,
+          temperature: 0.3,
+          timeout: 50000 // 50 second timeout for this specific request
+        })
 
     const analysisResult = response.choices[0]?.message?.content
     
@@ -281,6 +284,15 @@ Return structured JSON.
     
     // Handle OpenAI specific errors
     if (error instanceof Error) {
+      // Handle timeout errors
+      if (error.message.includes("timeout") || error.name === "AbortError") {
+        return NextResponse.json({ 
+          error: "Analysis timeout",
+          details: "Photo analysis took too long. This usually happens with large or complex images.",
+          suggestion: "Try uploading a smaller image (under 2MB) or a clearer photo with better lighting."
+        }, { status: 408 })
+      }
+      
       if (error.message.includes("unsupported image")) {
         return NextResponse.json({ 
           error: "Image format not supported",
@@ -295,6 +307,15 @@ Return structured JSON.
           details: "Too many requests. Please try again later",
           suggestion: "Wait a few minutes before trying again"
         }, { status: 429 })
+      }
+      
+      // Handle network/API errors
+      if (error.message.includes("network") || error.message.includes("fetch")) {
+        return NextResponse.json({ 
+          error: "Network error",
+          details: "Unable to connect to AI service. Please check your internet connection.",
+          suggestion: "Try again in a few moments or refresh the page."
+        }, { status: 503 })
       }
     }
     

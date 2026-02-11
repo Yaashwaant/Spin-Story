@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ const dressingPurposeOptions = ["work", "casual", "party", "travel", "wedding"];
 const colorComfortOptions = ["neutral", "pastel", "bold"];
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const { user, refreshUser, isLoading } = useAuth();
   const [profile, setProfile] = useState<Partial<Profile>>({});
   const [preferences, setPreferences] = useState<Partial<Preferences>>({ currency: "INR" });
@@ -26,26 +24,25 @@ export default function OnboardingPage() {
   const [bodyFile, setBodyFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [stylingAdvice, setStylingAdvice] = useState<string>("");
+  const [analysisStatus, setAnalysisStatus] = useState<string>("");
 
   // Handle redirect logic properly
   useEffect(() => {
     if (isLoading) return;
 
     if (!user) {
-      router.push("/login");
+      window.location.href = "/login";
       return;
     }
 
-    if (user.onboarded && !isRedirecting) {
-      setIsRedirecting(true);
-      router.push("/dashboard");
+    if (user.onboarded) {
+      window.location.href = "/dashboard";
     }
-  }, [user, isLoading, router, isRedirecting]);
+  }, [user, isLoading]);
 
-  // Don't render anything if loading, not authenticated, already onboarded or redirecting
-  if (isLoading || !user || (user?.onboarded) || isRedirecting) {
+  // Don't render anything if loading, not authenticated, or already onboarded
+  if (isLoading || !user || user?.onboarded) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -94,8 +91,7 @@ export default function OnboardingPage() {
     try {
       // If styling advice is already displayed, just redirect to dashboard
       if (stylingAdvice) {
-        setIsRedirecting(true);
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
         return;
       }
       
@@ -105,12 +101,13 @@ export default function OnboardingPage() {
       }
       
       setSubmitting(true);
+      setAnalysisStatus("Analyzing your photos... This may take up to 60 seconds.");
 
       // Analyze photos with AI
       let aiTraits = {};
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for analysis
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout for analysis (backend has 60s)
 
         // Send files directly using FormData (no base64 conversion needed)
         const formData = new FormData();
@@ -132,30 +129,51 @@ export default function OnboardingPage() {
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
+          
           if (aiData.success && aiData.traits) {
             aiTraits = aiData.traits;
             // Display styling advice if available
             if (aiData.traits.stylingAdvice) {
               setStylingAdvice(aiData.traits.stylingAdvice);
+              setAnalysisStatus("Analysis complete! Your personalized styling advice is ready.");
               // Don't redirect immediately - let user see the advice
               setSubmitting(false);
               return;
             }
+          } else if (aiData.error) {
+            // Handle specific error messages from backend
+            throw new Error(aiData.error);
           } else {
             throw new Error("AI analysis returned invalid data");
           }
+        } else if (aiResponse.status === 408) {
+          // Request timeout - analysis is still running
+          throw new Error("Photo analysis is taking longer than expected. Please wait a moment and try refreshing the page if needed.");
+        } else if (aiResponse.status === 503) {
+          // Service unavailable - network/service issue
+          throw new Error("Network connection issue. Please check your internet connection and try again.");
         } else {
+          // Try to get error details from response
           const errorData = await aiResponse.json().catch(() => ({ error: "Analysis failed" }));
           throw new Error(errorData.details || errorData.error || "AI analysis failed");
         }
       } catch (aiError) {
         console.error("AI analysis failed or timed out:", aiError);
         const errorMessage = aiError instanceof Error ? aiError.message : "Failed to analyze photos";
-        alert(errorMessage.includes("Unable to analyze photo") 
-          ? errorMessage + "\n\nPlease upload a different and clear photo of yourself."
-          : "Failed to analyze photos. Please upload clearer photos and try again."
-        );
+        
+        // Handle different types of errors with specific messages
+        if (errorMessage.includes("timeout") || errorMessage.includes("AbortError") || errorMessage.includes("taking longer than expected")) {
+          alert("Photo analysis is taking longer than expected.\n\nThis usually happens with:\n• Large image files (over 2MB)\n• Complex lighting conditions\n• Multiple people in the photo\n\nPlease try:\n• Uploading a smaller image\n• Using a clearer photo with better lighting\n• Uploading a different photo\n\nThe analysis may still be running - you can refresh the page to check if it's complete.");
+        } else if (errorMessage.includes("Network error") || errorMessage.includes("fetch") || errorMessage.includes("Network connection")) {
+          alert("Network connection issue. Please check your internet connection and try again.");
+        } else if (errorMessage.includes("Unable to analyze photo")) {
+          alert(errorMessage + "\n\nPlease upload a different and clear photo of yourself.");
+        } else {
+          alert("Failed to analyze photos. Please upload clearer photos and try again.");
+        }
+        
         setSubmitting(false);
+        setAnalysisStatus(""); // Clear status on error
         return; // Stop execution, don't save profile
       }
       
@@ -191,8 +209,12 @@ export default function OnboardingPage() {
 
       // Refresh user data and redirect to dashboard
       await refreshUser();
-      setIsRedirecting(true);
-      router.push("/dashboard");
+      
+      // Add a small delay to ensure auth context is properly updated
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Use window.location for a complete page reload to ensure fresh data
+      window.location.href = "/dashboard";
       
     } catch (error) {
       console.error("Onboarding error:", error);
@@ -471,6 +493,11 @@ export default function OnboardingPage() {
             {stylingAdvice && (
               <div className="p-4 border rounded-xl bg-green-50">
                 <h3 className="text-lg font-semibold mb-3 text-green-800">Your Personalized Styling Advice</h3>
+                {analysisStatus && (
+                  <div className="mb-3 p-2 bg-green-100 rounded-lg text-green-800 text-sm">
+                    {analysisStatus}
+                  </div>
+                )}
                 <div className="prose prose-sm max-w-none text-green-900">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -512,7 +539,7 @@ export default function OnboardingPage() {
 
             {/* Submit */}
             <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
-              {submitting ? "Analyzing & Saving Profile..." : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
+              {submitting ? (analysisStatus.includes("Analyzing") ? "Analyzing Photos..." : "Saving Profile...") : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
             </Button>
           </CardContent>
         </Card>
