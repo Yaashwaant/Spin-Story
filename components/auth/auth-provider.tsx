@@ -66,6 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         console.log("Auth provider - user data fetched:", data.user);
         console.log("Auth provider - onboarded status:", data.user.onboarded);
+        console.log("Auth provider - onboarded type:", typeof data.user.onboarded);
+        console.log("Auth provider - user ID:", data.user.id);
+        console.log("Auth provider - current pathname:", pathname);
         setUser(data.user);
         
         // Check if user needs onboarding
@@ -74,9 +77,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const justCompletedOnboarding = pathname === "/dashboard" && 
           (typeof document !== "undefined" && document.referrer.includes("/onboarding"));
         
-        if (!data.user.onboarded && pathname !== "/onboarding" && !pathname?.startsWith("/bdr") && !justCompletedOnboarding) {
+        const sessionOnboardingCompleted = sessionStorage.getItem('onboarding_completed');
+        
+        console.log("Auth provider - justCompletedOnboarding:", justCompletedOnboarding);
+        console.log("Auth provider - sessionOnboardingCompleted:", sessionOnboardingCompleted);
+        console.log("Auth provider - redirect conditions:", {
+          notOnboarded: !data.user.onboarded,
+          notOnOnboardingPage: pathname !== "/onboarding",
+          notBdrRoute: !pathname?.startsWith("/bdr"),
+          notJustCompleted: !justCompletedOnboarding,
+          notSessionCompleted: !sessionOnboardingCompleted
+        });
+        
+        if (!data.user.onboarded && pathname !== "/onboarding" && !pathname?.startsWith("/bdr") && !justCompletedOnboarding && !sessionOnboardingCompleted) {
           console.log("Auth provider - redirecting to onboarding because user not onboarded");
-          router.push("/onboarding");
+          setTimeout(() => {
+            if (pathname !== "/onboarding") {
+              router.push("/onboarding");
+            }
+          }, 100);
+        } else {
+          console.log("Auth provider - NOT redirecting to onboarding");
         }
       } else {
         // If the token is invalid/expired (401) or user not found (404), clear the session

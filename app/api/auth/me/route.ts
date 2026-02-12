@@ -68,6 +68,8 @@ export async function GET(req: NextRequest) {
     const user = await getUserById(decoded.id);
     
     console.log("Auth me - user from DB:", user);
+    console.log("Auth me - user onboarded field:", user?.onboarded);
+    console.log("Auth me - user onboarded type:", typeof user?.onboarded);
     
     if (!user) {
       return NextResponse.json(

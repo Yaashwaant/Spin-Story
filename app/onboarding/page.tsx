@@ -29,6 +29,7 @@ export default function OnboardingPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [stylingAdvice, setStylingAdvice] = useState<string>("");
   const [aiAnalysisSkipped, setAiAnalysisSkipped] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   // Handle redirect logic properly
   useEffect(() => {
@@ -39,11 +40,23 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (user.onboarded && !isRedirecting) {
+    const sessionCompleted = sessionStorage.getItem('onboarding_completed');
+    if (user.onboarded && !isRedirecting && !onboardingCompleted && !sessionCompleted) {
       setIsRedirecting(true);
-      router.push("/dashboard");
+      setOnboardingCompleted(true);
+      sessionStorage.setItem('onboarding_completed', 'true');
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 200);
     }
-  }, [user, isLoading, router, isRedirecting]);
+
+    // Cleanup session storage after successful redirect
+    return () => {
+      if (onboardingCompleted) {
+        sessionStorage.removeItem('onboarding_completed');
+      }
+    };
+  }, [user, isLoading, router, isRedirecting, onboardingCompleted]);
 
   // Don't render anything if loading, not authenticated, already onboarded or redirecting
   if (isLoading || !user || (user?.onboarded) || isRedirecting) {
@@ -93,10 +106,61 @@ export default function OnboardingPage() {
 
   const handleSave = async () => {
     try {
-      // If styling advice is already displayed, just redirect to dashboard
+      // If styling advice is already displayed, complete onboarding and redirect to dashboard
       if (stylingAdvice) {
-        setIsRedirecting(true);
-        router.push("/dashboard");
+        console.log("Onboarding - AI analysis successful, completing onboarding...");
+        setSubmitting(true);
+        
+        try {
+          // Call the completion endpoint to set onboarded: true
+          const completeResponse = await fetch("/api/onboarding/complete", {
+            method: "POST",
+            credentials: "include",
+          });
+          
+          console.log("Onboarding complete response status:", completeResponse.status);
+          
+          if (completeResponse.ok) {
+            const completeData = await completeResponse.json();
+            console.log("Onboarding completed successfully:", completeData);
+            
+            // Force refresh the token to get updated onboarded status
+            const refreshResponse = await fetch("/api/auth/refresh-token", {
+              method: "POST",
+              credentials: "include",
+            });
+            
+            if (refreshResponse.ok) {
+              // Now fetch fresh user data with the new token
+              const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
+                credentials: "include",
+              });
+              
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                console.log("Fresh user data after completion:", userData.user);
+                console.log("Fresh onboarded status after completion:", userData.user.onboarded);
+                
+                // Manually update the user state in auth context
+                if (user) {
+                  setUser({ ...user, ...userData.user });
+                }
+              }
+            }
+            
+            setIsRedirecting(true);
+            router.push("/dashboard");
+          } else {
+            throw new Error("Failed to complete onboarding");
+          }
+        } catch (error) {
+          console.error("Error completing onboarding:", error);
+          // Still redirect even if completion fails - user has seen the analysis
+          setIsRedirecting(true);
+          router.push("/dashboard");
+        } finally {
+          setSubmitting(false);
+        }
         return;
       }
       
@@ -193,62 +257,20 @@ export default function OnboardingPage() {
       
       const saveData = await response.json();
       console.log("Onboarding - save response data:", saveData);
+      console.log("Onboarding - profile saved successfully, onboarded should still be false");
 
-      // Force refresh the token to get updated onboarded status
-      console.log("Onboarding - calling refresh-token endpoint");
-      const refreshResponse = await fetch("/api/auth/refresh-token", {
-        method: "POST",
-        credentials: "include",
-      });
-      
-      console.log("Refresh token response status:", refreshResponse.status);
-      
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        console.log("Token refreshed:", refreshData.success);
-        
-        // Now fetch fresh user data with the new token
-        const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
-          credentials: "include",
+      // Just update the user context with the new profile/preferences
+      // but onboarded will still be false until user clicks "Continue to Dashboard"
+      if (user) {
+        setUser({ 
+          ...user, 
+          profile: finalProfile, 
+          preferences: cleanPreferences 
         });
-        
-        console.log("User response status:", userResponse.status);
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          console.log("Fresh user data:", userData.user);
-          console.log("Fresh onboarded status:", userData.user.onboarded);
-          
-          // Manually update the user state in auth context
-          if (user) {
-            setUser({ ...user, ...userData.user });
-          }
-
-          // Give React time to re-render with updated user
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } else {
-          console.error("Failed to fetch user data:", userResponse.status, userResponse.statusText);
-        }
-      } else {
-        console.error("Failed to refresh token:", refreshResponse.status, refreshResponse.statusText);
-        
-        // Fallback: try to fetch user data anyway
-        const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
-          credentials: "include",
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          console.log("Fresh user data (fallback):", userData.user);
-          if (user) {
-            setUser({ ...user, ...userData.user });
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
       }
-      
-      setIsRedirecting(true);
-      router.push("/dashboard");
+
+      // Don't redirect yet - user needs to see the styling advice first
+      // The button will change to "Continue to Dashboard" and handle completion
       
     } catch (error) {
       console.error("Onboarding error:", error);

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { profileSchema, preferencesSchema } from "@/models/user";
 import { verifyToken, generateToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -23,23 +22,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const profile = profileSchema.parse(body.profile);
-    const preferences = preferencesSchema.parse(body.preferences);
-
     const userRef = adminDb.collection("users").doc(decoded.id);
 
-    console.log("Onboarding - updating user with profile and preferences (NOT setting onboarded yet)");
+    console.log("Onboarding complete - setting onboarded: true for user:", decoded.id);
     
     await userRef.update({
-      profile,
-      preferences,
+      onboarded: true,
       updatedAt: new Date(),
     });
 
     // Fetch updated user data
     const updatedUserDoc = await userRef.get();
-    console.log("Onboarding - updated user data (onboarded should still be false):", updatedUserDoc.data());
+    console.log("Onboarding complete - updated user data:", updatedUserDoc.data());
+    console.log("Onboarding complete - updated onboarded field:", updatedUserDoc.data()?.onboarded);
     
     if (!updatedUserDoc.exists) {
       return NextResponse.json({ error: "User not found after update" }, { status: 404 });
@@ -55,7 +50,11 @@ export async function POST(req: NextRequest) {
       onboarded: updatedUser.onboarded,
     });
 
-    const response = NextResponse.json({ success: true, userId: decoded.id });
+    const response = NextResponse.json({ 
+      success: true, 
+      userId: decoded.id,
+      onboarded: updatedUser.onboarded 
+    });
     
     // Set new cookie with updated token
     response.cookies.set("auth-token", newToken, {
@@ -66,20 +65,12 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
-    console.log("Onboarding - setting new cookie with onboarded:", updatedUser.onboarded);
-    console.log("Onboarding - response cookies:", response.cookies.getAll());
+    console.log("Onboarding complete - setting new cookie with onboarded:", updatedUser.onboarded);
 
     return response;
   } catch (error) {
-    console.error("Onboarding error:", error);
+    console.error("Onboarding complete error:", error);
     
-    if (error instanceof Error && error.name === "ZodError") {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.message },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

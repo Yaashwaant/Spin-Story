@@ -22,15 +22,21 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 export function generateToken(user: AuthUser): string {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  console.log("generateToken - user data:", user);
+  console.log("generateToken - onboarded value:", user.onboarded);
+  const token = jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  console.log("generateToken - generated token payload:", jwt.decode(token));
+  return token;
 }
 
 export function verifyToken(token: string): AuthUser | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    console.log("verifyToken - decoded token:", decoded);
+    console.log("verifyToken - onboarded value:", decoded.onboarded);
     return decoded;
   } catch (error) {
-    console.error("Token verification failed:", error);
+    console.error("Token verification failed:", error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -65,8 +71,8 @@ async function getAdminDb() {
         throw new Error('Firebase Admin module not found or invalid');
       }
     } catch (error) {
-      console.error('Failed to load Firebase Admin:', error);
-      throw new Error(`Firebase Admin not available: ${error.message}`);
+      console.error('Failed to load Firebase Admin:', error instanceof Error ? error.message : String(error));
+      throw new Error(`Firebase Admin not available: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
