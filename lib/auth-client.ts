@@ -26,3 +26,34 @@ export function verifyToken(token: string): AuthUser | null {
     return null;
   }
 }
+
+// Check if token has complete structure (client-side)
+export function isTokenComplete(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return !!(payload.id && payload.email && payload.fullName && payload.role && payload.onboarded !== undefined);
+  } catch (error) {
+    return false;
+  }
+}
+
+// Manually refresh token if needed
+export async function refreshTokenIfNeeded(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/auth/refresh-token", {
+      method: "POST",
+      credentials: "include",
+    });
+    
+    if (response.ok) {
+      console.log("Token refreshed successfully");
+      return true;
+    } else {
+      console.error("Token refresh failed:", response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    return false;
+  }
+}

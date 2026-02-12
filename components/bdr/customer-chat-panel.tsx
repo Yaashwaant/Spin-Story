@@ -489,7 +489,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
             <TabsTrigger value="general">General advice</TabsTrigger>
           </TabsList>
           <div className={activeTab === "general" ? "block" : "hidden"}>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
+            <div className="grid gap-4">
               <Card className="border-none bg-slate-50/60">
                 <CardContent className="pt-4">
                   <ScrollArea className="h-64 pr-3">
@@ -586,16 +586,7 @@ export function CustomerChatPanel({ customerId, customerName, customerProfile, c
                   </div>
                 </CardContent>
               </Card>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Use this tab for quick questions and styling advice that you want to share with the customer.
-                </p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>Clarify which items from their wardrobe to prioritize.</li>
-                  <li>Ask for alternatives if some items are unavailable.</li>
-                  <li>Prepare how you will explain the plan to the customer.</li>
-                </ul>
-              </div>
+
             </div>
           </div>
           <div className={activeTab === "plan" ? "block" : "hidden"}>

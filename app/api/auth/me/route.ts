@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserById, updateUser } from "@/lib/auth";
-import { verifyToken } from "@/lib/auth-edge";
+import { getUserById, updateUser, verifyToken, isTokenComplete, generateToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("auth-token")?.value;
+    
+    console.log("Auth me - cookies:", req.cookies.getAll());
+    console.log("Auth me - token:", token);
     
     if (!token) {
       return NextResponse.json(
@@ -15,6 +17,8 @@ export async function GET(req: NextRequest) {
 
     const decoded = await verifyToken(token);
     
+    console.log("Auth me - decoded token:", decoded);
+    
     if (!decoded) {
       return NextResponse.json(
         { error: "Invalid or expired token" },
@@ -22,7 +26,48 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Check if token has complete structure - if not, refresh it
+    if (!isTokenComplete(token)) {
+      console.log("Auth me - token incomplete, refreshing...");
+      const user = await getUserById(decoded.id);
+      if (user) {
+        const newToken = await generateToken({
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          onboarded: user.onboarded,
+        });
+        
+        // Create response with new token
+        const response = NextResponse.json({
+          success: true,
+          user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            role: user.role,
+            onboarded: user.onboarded,
+          },
+        });
+        
+        response.cookies.set("auth-token", newToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7,
+          path: "/",
+        });
+        
+        console.log("Auth me - token refreshed with onboarded:", user.onboarded);
+        return response;
+      }
+    }
+
     const user = await getUserById(decoded.id);
+    
+    console.log("Auth me - user from DB:", user);
     
     if (!user) {
       return NextResponse.json(

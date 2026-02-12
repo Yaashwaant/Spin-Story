@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { profileSchema, preferencesSchema } from "@/models/user";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, generateToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
 
     const userRef = adminDb.collection("users").doc(decoded.id);
 
+    console.log("Onboarding - updating user with:", { profile, preferences, onboarded: true });
+    
     await userRef.update({
       profile,
       preferences,
@@ -36,7 +38,38 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    return NextResponse.json({ success: true, userId: decoded.id });
+    // Fetch updated user data
+    const updatedUserDoc = await userRef.get();
+    console.log("Onboarding - updated user data:", updatedUserDoc.data());
+    if (!updatedUserDoc.exists) {
+      return NextResponse.json({ error: "User not found after update" }, { status: 404 });
+    }
+    const updatedUser = updatedUserDoc.data()!;
+
+    // Regenerate token with updated user data
+    const newToken = await generateToken({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      role: updatedUser.role,
+      onboarded: updatedUser.onboarded,
+    });
+
+    const response = NextResponse.json({ success: true, userId: decoded.id });
+    
+    // Set new cookie with updated token
+    response.cookies.set("auth-token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
+    console.log("Onboarding - setting new cookie with onboarded:", updatedUser.onboarded);
+    console.log("Onboarding - response cookies:", response.cookies.getAll());
+
+    return response;
   } catch (error) {
     console.error("Onboarding error:", error);
     

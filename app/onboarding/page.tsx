@@ -19,7 +19,7 @@ const colorComfortOptions = ["neutral", "pastel", "bold"];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, refreshUser, isLoading } = useAuth();
+  const { user, refreshUser, isLoading, setUser } = useAuth();
   const [profile, setProfile] = useState<Partial<Profile>>({});
   const [preferences, setPreferences] = useState<Partial<Preferences>>({ currency: "INR" });
   const [faceFile, setFaceFile] = useState<File | null>(null);
@@ -28,6 +28,7 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [stylingAdvice, setStylingAdvice] = useState<string>("");
+  const [aiAnalysisSkipped, setAiAnalysisSkipped] = useState(false);
 
   // Handle redirect logic properly
   useEffect(() => {
@@ -134,6 +135,10 @@ export default function OnboardingPage() {
           const aiData = await aiResponse.json();
           if (aiData.success && aiData.traits) {
             aiTraits = aiData.traits;
+            // If traits are empty, mark as skipped so we can show a gentle notice
+            if (Object.keys(aiData.traits).length === 0) {
+              setAiAnalysisSkipped(true);
+            }
             // Display styling advice if available
             if (aiData.traits.stylingAdvice) {
               setStylingAdvice(aiData.traits.stylingAdvice);
@@ -150,13 +155,8 @@ export default function OnboardingPage() {
         }
       } catch (aiError) {
         console.error("AI analysis failed or timed out:", aiError);
-        const errorMessage = aiError instanceof Error ? aiError.message : "Failed to analyze photos";
-        alert(errorMessage.includes("Unable to analyze photo") 
-          ? errorMessage + "\n\nPlease upload a different and clear photo of yourself."
-          : "Failed to analyze photos. Please upload clearer photos and try again."
-        );
-        setSubmitting(false);
-        return; // Stop execution, don't save profile
+        // Silently continue; we'll show a small notice on the page instead of blocking onboarding
+        // No alert, no return
       }
       
       // Clean up the data - remove undefined values
@@ -185,12 +185,68 @@ export default function OnboardingPage() {
         }),
       });
 
+      console.log("Onboarding - save response status:", response.status);
+      
       if (!response.ok) {
         throw new Error("Failed to save profile");
       }
+      
+      const saveData = await response.json();
+      console.log("Onboarding - save response data:", saveData);
 
-      // Refresh user data and redirect to dashboard
-      await refreshUser();
+      // Force refresh the token to get updated onboarded status
+      console.log("Onboarding - calling refresh-token endpoint");
+      const refreshResponse = await fetch("/api/auth/refresh-token", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      console.log("Refresh token response status:", refreshResponse.status);
+      
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        console.log("Token refreshed:", refreshData.success);
+        
+        // Now fetch fresh user data with the new token
+        const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
+          credentials: "include",
+        });
+        
+        console.log("User response status:", userResponse.status);
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          console.log("Fresh user data:", userData.user);
+          console.log("Fresh onboarded status:", userData.user.onboarded);
+          
+          // Manually update the user state in auth context
+          if (user) {
+            setUser({ ...user, ...userData.user });
+          }
+
+          // Give React time to re-render with updated user
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else {
+          console.error("Failed to fetch user data:", userResponse.status, userResponse.statusText);
+        }
+      } else {
+        console.error("Failed to refresh token:", refreshResponse.status, refreshResponse.statusText);
+        
+        // Fallback: try to fetch user data anyway
+        const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
+          credentials: "include",
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          console.log("Fresh user data (fallback):", userData.user);
+          if (user) {
+            setUser({ ...user, ...userData.user });
+          }
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
       setIsRedirecting(true);
       router.push("/dashboard");
       
@@ -511,6 +567,11 @@ export default function OnboardingPage() {
             )}
 
             {/* Submit */}
+            {aiAnalysisSkipped && (
+              <p className="text-sm text-muted-foreground text-center">
+                We couldn’t analyze your photos this time, but you can still complete your profile and get styling advice later.
+              </p>
+            )}
             <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
               {submitting ? "Analyzing & Saving Profile..." : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
             </Button>

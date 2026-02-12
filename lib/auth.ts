@@ -35,6 +35,16 @@ export function verifyToken(token: string): AuthUser | null {
   }
 }
 
+// Check if token has complete structure (prevents stale token issues)
+export function isTokenComplete(token: string): boolean {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    return !!(decoded.id && decoded.email && decoded.fullName && decoded.role && decoded.onboarded !== undefined);
+  } catch (error) {
+    return false;
+  }
+}
+
 // Server-side only functions - these should only be used in API routes
 let adminDb: any = null;
 

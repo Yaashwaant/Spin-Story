@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { isTokenComplete } from "@/lib/auth-client";
 
 interface User {
   id: string;
@@ -21,6 +22,7 @@ interface AuthContextType {
   signUp: (data: any) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,28 +33,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchUser = async () => {
+  const fetchUser = async (forceRefresh = false) => {
     // Skip auth check for public routes to avoid unnecessary API calls
     const publicRoutes = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/bdr/login"];
     const isPublicRoute = publicRoutes.some(route => pathname === route || pathname?.startsWith(route + '/'));
     
-    if (isPublicRoute) {
+    if (isPublicRoute && !forceRefresh) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/auth/me", {
+      console.log("Auth provider - fetching user data, pathname:", pathname);
+      console.log("Auth provider - cookies:", document.cookie);
+      
+      // Check if current token is complete - if not, auth me endpoint will auto-refresh it
+      const currentToken = document.cookie.split('; ').find(row => row.startsWith('auth-token='))?.split('=')[1];
+      if (currentToken) {
+        const isComplete = isTokenComplete(currentToken);
+        console.log("Auth provider - token complete:", isComplete);
+        if (!isComplete) {
+          console.log("Auth provider - token incomplete, will be refreshed by server");
+        }
+      }
+      
+      const response = await fetch(`/api/auth/me?t=${Date.now()}`, {
         credentials: "include",
       });
+      console.log("Auth provider - response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
+        console.log("Auth provider - user data fetched:", data.user);
+        console.log("Auth provider - onboarded status:", data.user.onboarded);
         setUser(data.user);
         
         // Check if user needs onboarding
         // Allow BDR routes to be accessible even if not onboarded
-        if (!data.user.onboarded && pathname !== "/onboarding" && !pathname?.startsWith("/bdr")) {
+        // Special case: if we just came from onboarding and user is now onboarded, don't redirect back
+        const justCompletedOnboarding = pathname === "/dashboard" && 
+          (typeof document !== "undefined" && document.referrer.includes("/onboarding"));
+        
+        if (!data.user.onboarded && pathname !== "/onboarding" && !pathname?.startsWith("/bdr") && !justCompletedOnboarding) {
+          console.log("Auth provider - redirecting to onboarding because user not onboarded");
           router.push("/onboarding");
         }
       } else {
@@ -146,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUser = async () => {
-    await fetchUser();
+    await fetchUser(true); // Force refresh to get latest data
   };
 
   return (
@@ -158,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         refreshUser,
+        setUser,
       }}
     >
       {children}

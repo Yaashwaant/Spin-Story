@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/models/auth";
-import { authenticateAndGenerateToken } from "@/lib/auth-edge";
+import { authenticateUser, generateToken } from "@/lib/auth";
 import { z } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -9,16 +9,22 @@ export async function POST(req: NextRequest) {
     
     const validatedData = signInSchema.parse(body);
     
-    const result = await authenticateAndGenerateToken(validatedData.emailOrPhone, validatedData.password);
+    const user = await authenticateUser(validatedData.emailOrPhone, validatedData.password);
     
-    if (!result) {
+    if (!user) {
       return NextResponse.json(
         { error: "Invalid email/phone or password" },
         { status: 401 }
       );
     }
 
-    const { user, token } = result;
+    const token = await generateToken({
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      onboarded: user.onboarded,
+    });
 
     if (!user.isActive) {
       return NextResponse.json(
