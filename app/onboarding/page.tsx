@@ -28,7 +28,6 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [stylingAdvice, setStylingAdvice] = useState<string>("");
-  const [aiAnalysisSkipped, setAiAnalysisSkipped] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   // Handle redirect logic properly
@@ -199,9 +198,9 @@ export default function OnboardingPage() {
           const aiData = await aiResponse.json();
           if (aiData.success && aiData.traits) {
             aiTraits = aiData.traits;
-            // If traits are empty, mark as skipped so we can show a gentle notice
+            // If traits are empty, this indicates AI analysis failed
             if (Object.keys(aiData.traits).length === 0) {
-              setAiAnalysisSkipped(true);
+              throw new Error("AI analysis returned empty results");
             }
             // Display styling advice if available
             if (aiData.traits.stylingAdvice) {
@@ -219,8 +218,10 @@ export default function OnboardingPage() {
         }
       } catch (aiError) {
         console.error("AI analysis failed or timed out:", aiError);
-        // Silently continue; we'll show a small notice on the page instead of blocking onboarding
-        // No alert, no return
+        // AI analysis is mandatory - block onboarding if it fails
+        alert("AI photo analysis is required to complete your profile. Please try uploading different photos or contact support if the issue persists.");
+        setSubmitting(false);
+        return;
       }
       
       // Clean up the data - remove undefined values
@@ -589,11 +590,6 @@ export default function OnboardingPage() {
             )}
 
             {/* Submit */}
-            {aiAnalysisSkipped && (
-              <p className="text-sm text-muted-foreground text-center">
-                We couldn’t analyze your photos this time, but you can still complete your profile and get styling advice later.
-              </p>
-            )}
             <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
               {submitting ? "Analyzing & Saving Profile..." : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
             </Button>
