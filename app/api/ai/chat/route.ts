@@ -71,28 +71,86 @@ export async function POST(req: NextRequest) {
     // Build comprehensive customer context for the AI
     const customerContext = []
     
-    // Extract AI personality analysis if available
+    // Extract AI personality analysis if available - ALWAYS include by default
     const aiTraits = customerProfile?.aiExtractedTraits || {}
     
-    // PERSONALITY & STYLE ANALYSIS SECTION
-    if (Object.keys(aiTraits).length > 0) {
-      customerContext.push(`🎯 AI PERSONALITY ANALYSIS:
-• Visual Frame Presence: ${aiTraits.visualFramePresence || 'moderate'}
-• Shoulder Balance: ${aiTraits.shoulderBalance || 'balanced'}
-• Torso-to-Leg Balance: ${aiTraits.torsoToLegBalance || 'balanced'}
-• Vertical Emphasis: ${aiTraits.verticalEmphasis || 'moderate'}
-• Horizontal Emphasis: ${aiTraits.horizontalEmphasis || 'moderate'}
-• Silhouette Structure: ${aiTraits.silhouetteStructure || 'structured'}
-• Visual Weight Distribution: ${aiTraits.visualWeightDistribution || 'balanced'}
-• Fit Observation: ${aiTraits.fitObservation || 'tailored'}
-
-OPTIMAL STYLING LEVERS:
-• Jacket Length: ${aiTraits.stylingLevers?.recommendedJacketLength || 'standard'}
-• Trouser Rise: ${aiTraits.stylingLevers?.recommendedTrouserRise || 'mid-rise'}
-• Lapel Strategy: ${aiTraits.stylingLevers?.lapelStrategy || 'medium'}
-• Taper Strategy: ${aiTraits.stylingLevers?.taperStrategy || 'slight'}
-• Fabric Weight: ${aiTraits.stylingLevers?.fabricWeightSuggestion || 'medium'}
-• Color Contrast: ${aiTraits.stylingLevers?.colorContrastStrategy || 'medium'}`)
+    // PERSONALITY & STYLE ANALYSIS SECTION - Always included as core context
+    const personalitySections = []
+    
+    // Core AI Analysis Fields (from onboarding AI analysis)
+    if (aiTraits.visualFramePresence) {
+      personalitySections.push(`• Visual Frame Presence: ${aiTraits.visualFramePresence}`)
+    }
+    if (aiTraits.shoulderBalance) {
+      personalitySections.push(`• Shoulder Balance: ${aiTraits.shoulderBalance}`)
+    }
+    if (aiTraits.torsoToLegBalance) {
+      personalitySections.push(`• Torso-to-Leg Balance: ${aiTraits.torsoToLegBalance}`)
+    }
+    if (aiTraits.verticalEmphasis) {
+      personalitySections.push(`• Vertical Emphasis: ${aiTraits.verticalEmphasis}`)
+    }
+    if (aiTraits.horizontalEmphasis) {
+      personalitySections.push(`• Horizontal Emphasis: ${aiTraits.horizontalEmphasis}`)
+    }
+    if (aiTraits.silhouetteStructure) {
+      personalitySections.push(`• Silhouette Structure: ${aiTraits.silhouetteStructure}`)
+    }
+    if (aiTraits.visualWeightDistribution) {
+      personalitySections.push(`• Visual Weight Distribution: ${aiTraits.visualWeightDistribution}`)
+    }
+    if (aiTraits.fitObservation) {
+      personalitySections.push(`• Fit Observation: ${aiTraits.fitObservation}`)
+    }
+    if (aiTraits.contrastLevel) {
+      personalitySections.push(`• Contrast Level: ${aiTraits.contrastLevel}`)
+    }
+    
+    // Skin Tone Analysis
+    if (aiTraits.skinTone && aiTraits.skinTone.depth && aiTraits.skinTone.undertone) {
+      personalitySections.push(`• Skin Tone Properties: ${aiTraits.skinTone.depth} depth, ${aiTraits.skinTone.undertone} undertone`)
+    }
+    
+    // Style Essence and Color Harmony
+    if (aiTraits.styleEssence) {
+      personalitySections.push(`• Style Essence: ${aiTraits.styleEssence}`)
+    }
+    if (aiTraits.colorHarmony) {
+      personalitySections.push(`• Color Harmony: ${aiTraits.colorHarmony}`)
+    }
+    
+    // Styling Levers
+    const stylingLevers = []
+    if (aiTraits.stylingLevers?.recommendedJacketLength) {
+      stylingLevers.push(`Jacket Length: ${aiTraits.stylingLevers.recommendedJacketLength}`)
+    }
+    if (aiTraits.stylingLevers?.recommendedTrouserRise) {
+      stylingLevers.push(`Trouser Rise: ${aiTraits.stylingLevers.recommendedTrouserRise}`)
+    }
+    if (aiTraits.stylingLevers?.lapelStrategy) {
+      stylingLevers.push(`Lapel Strategy: ${aiTraits.stylingLevers.lapelStrategy}`)
+    }
+    if (aiTraits.stylingLevers?.taperStrategy) {
+      stylingLevers.push(`Taper Strategy: ${aiTraits.stylingLevers.taperStrategy}`)
+    }
+    if (aiTraits.stylingLevers?.fabricWeightSuggestion) {
+      stylingLevers.push(`Fabric Weight: ${aiTraits.stylingLevers.fabricWeightSuggestion}`)
+    }
+    if (aiTraits.stylingLevers?.colorContrastStrategy) {
+      stylingLevers.push(`Color Contrast: ${aiTraits.stylingLevers.colorContrastStrategy}`)
+    }
+    
+    if (stylingLevers.length > 0) {
+      personalitySections.push(`• Optimal Styling: ${stylingLevers.join(', ')}`)
+    }
+    
+    // Always include personality analysis as core context
+    if (personalitySections.length > 0) {
+      customerContext.push(`🎯 AI VISUAL ANALYSIS (Core Personality Context):
+${personalitySections.join('\n')}`)
+    } else {
+      // Fallback when no AI analysis is available
+      customerContext.push(`🎯 AI VISUAL ANALYSIS: No AI analysis data available yet`)
     }
     
     // COMPREHENSIVE PROFILE SECTION

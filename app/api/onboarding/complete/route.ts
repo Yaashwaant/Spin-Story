@@ -24,6 +24,16 @@ export async function POST(req: NextRequest) {
 
     const userRef = adminDb.collection("users").doc(decoded.id);
 
+    // Fetch current user data to preserve existing profile (including AI traits)
+    const currentUserDoc = await userRef.get();
+    if (!currentUserDoc.exists) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    
+    const currentUserData = currentUserDoc.data();
+    console.log("Onboarding complete - current user data:", currentUserData);
+    console.log("Onboarding complete - current profile.aiExtractedTraits:", currentUserData?.profile?.aiExtractedTraits);
+
     console.log("Onboarding complete - setting onboarded: true for user:", decoded.id);
     
     await userRef.update({
@@ -35,6 +45,7 @@ export async function POST(req: NextRequest) {
     const updatedUserDoc = await userRef.get();
     console.log("Onboarding complete - updated user data:", updatedUserDoc.data());
     console.log("Onboarding complete - updated onboarded field:", updatedUserDoc.data()?.onboarded);
+    console.log("Onboarding complete - preserved profile.aiExtractedTraits:", updatedUserDoc.data()?.profile?.aiExtractedTraits);
     
     if (!updatedUserDoc.exists) {
       return NextResponse.json({ error: "User not found after update" }, { status: 404 });

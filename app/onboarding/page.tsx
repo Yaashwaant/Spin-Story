@@ -8,14 +8,31 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { uploadProfilePhoto, compressImage } from "@/lib/upload-profile-photo";
 import { profileSchema, preferencesSchema, type Profile, type Preferences } from "@/models/user";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+// Profile field options
 const wearsMostOptions = ["Tops", "Bottoms", "Ethnic", "Western", "Sportswear"];
-const dressingPurposeOptions = ["work", "casual", "party", "travel", "wedding"];
 const colorComfortOptions = ["neutral", "pastel", "bold"];
+const fitPreferenceOptions = ["slim", "regular", "loose"];
+
+// AI analysis fields that will be stored for chat context
+const AI_ANALYSIS_FIELDS = [
+  "visualFramePresence",
+  "shoulderBalance", 
+  "torsoToLegBalance",
+  "verticalEmphasis",
+  "horizontalEmphasis", 
+  "silhouetteStructure",
+  "visualWeightDistribution",
+  "contrastLevel",
+  "fitObservation",
+  "skinTone",
+  "styleEssence", 
+  "colorHarmony",
+  "stylingLevers"
+] as const;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -27,10 +44,10 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [stylingAdvice, setStylingAdvice] = useState<string>("");
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Handle redirect logic properly
+  // Redirect logic
   useEffect(() => {
     if (isLoading) return;
 
@@ -49,7 +66,6 @@ export default function OnboardingPage() {
       }, 200);
     }
 
-    // Cleanup session storage after successful redirect
     return () => {
       if (onboardingCompleted) {
         sessionStorage.removeItem('onboarding_completed');
@@ -57,8 +73,8 @@ export default function OnboardingPage() {
     };
   }, [user, isLoading, router, isRedirecting, onboardingCompleted]);
 
-  // Don't render anything if loading, not authenticated, already onboarded or redirecting
-  if (isLoading || !user || (user?.onboarded) || isRedirecting) {
+  // Don't render if loading, not authenticated, already onboarded or redirecting
+  if (isLoading || !user || user?.onboarded || isRedirecting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -72,7 +88,7 @@ export default function OnboardingPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    // Check required fields
+    // Required fields
     if (!profile.height) newErrors.height = "Height is required";
     if (!profile.weight) newErrors.weight = "Weight is required";
     if (!profile.hairColor) newErrors.hairColor = "Hair color is required";
@@ -91,27 +107,14 @@ export default function OnboardingPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        // FileReader result includes "data:image/jpeg;base64," prefix which we want to keep
-        resolve(reader.result as string);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleSave = async () => {
     try {
-      // If styling advice is already displayed, complete onboarding and redirect to dashboard
-      if (stylingAdvice) {
-        console.log("Onboarding - AI analysis successful, completing onboarding...");
+      // If AI analysis is complete, finish onboarding
+      if (aiAnalysisResult) {
+        console.log("Onboarding - AI analysis complete, finishing onboarding...");
         setSubmitting(true);
         
         try {
-          // Call the completion endpoint to set onboarded: true
           const completeResponse = await fetch("/api/onboarding/complete", {
             method: "POST",
             credentials: "include",
@@ -123,14 +126,12 @@ export default function OnboardingPage() {
             const completeData = await completeResponse.json();
             console.log("Onboarding completed successfully:", completeData);
             
-            // Force refresh the token to get updated onboarded status
             const refreshResponse = await fetch("/api/auth/refresh-token", {
               method: "POST",
               credentials: "include",
             });
             
             if (refreshResponse.ok) {
-              // Now fetch fresh user data with the new token
               const userResponse = await fetch("/api/auth/me?t=" + Date.now(), {
                 credentials: "include",
               });
@@ -138,9 +139,7 @@ export default function OnboardingPage() {
               if (userResponse.ok) {
                 const userData = await userResponse.json();
                 console.log("Fresh user data after completion:", userData.user);
-                console.log("Fresh onboarded status after completion:", userData.user.onboarded);
                 
-                // Manually update the user state in auth context
                 if (user) {
                   setUser({ ...user, ...userData.user });
                 }
@@ -154,9 +153,7 @@ export default function OnboardingPage() {
           }
         } catch (error) {
           console.error("Error completing onboarding:", error);
-          // Still redirect even if completion fails - user has seen the analysis
-          setIsRedirecting(true);
-          router.push("/dashboard");
+          alert("Failed to complete onboarding. Please try again.");
         } finally {
           setSubmitting(false);
         }
@@ -174,9 +171,8 @@ export default function OnboardingPage() {
       let aiTraits = {};
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for analysis
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        // Send files directly using FormData (no base64 conversion needed)
         const formData = new FormData();
         if (faceFile) {
           formData.append('facePhoto', faceFile);
@@ -189,25 +185,21 @@ export default function OnboardingPage() {
           method: "POST",
           body: formData,
           signal: controller.signal
-          // Note: Don't set Content-Type header for FormData - browser sets it automatically
         });
         
         clearTimeout(timeoutId);
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
+          console.log("Frontend - AI response received:", aiData);
+          
           if (aiData.success && aiData.traits) {
             aiTraits = aiData.traits;
+            setAiAnalysisResult(aiData.traits);
+            
             // If traits are empty, this indicates AI analysis failed
             if (Object.keys(aiData.traits).length === 0) {
               throw new Error("AI analysis returned empty results");
-            }
-            // Display styling advice if available
-            if (aiData.traits.stylingAdvice) {
-              setStylingAdvice(aiData.traits.stylingAdvice);
-              // Don't redirect immediately - let user see the advice
-              setSubmitting(false);
-              return;
             }
           } else {
             throw new Error("AI analysis returned invalid data");
@@ -218,7 +210,6 @@ export default function OnboardingPage() {
         }
       } catch (aiError) {
         console.error("AI analysis failed or timed out:", aiError);
-        // AI analysis is mandatory - block onboarding if it fails
         alert("AI photo analysis is required to complete your profile. Please try uploading different photos or contact support if the issue persists.");
         setSubmitting(false);
         return;
@@ -233,11 +224,14 @@ export default function OnboardingPage() {
         Object.entries(preferences).filter(([_, v]) => v !== undefined && v !== null && (v as any) !== '')
       );
 
-      // Prepare final profile object - We DO NOT store the image URLs anymore as requested
+      // Prepare final profile object with AI analysis results
       const finalProfile = {
         ...cleanProfile,
         aiExtractedTraits: aiTraits,
       };
+      
+      console.log("Frontend - finalProfile prepared:", finalProfile);
+      console.log("Frontend - aiExtractedTraits in finalProfile:", finalProfile.aiExtractedTraits);
 
       // Submit to API
       const response = await fetch("/api/onboarding", {
@@ -258,10 +252,8 @@ export default function OnboardingPage() {
       
       const saveData = await response.json();
       console.log("Onboarding - save response data:", saveData);
-      console.log("Onboarding - profile saved successfully, onboarded should still be false");
-
-      // Just update the user context with the new profile/preferences
-      // but onboarded will still be false until user clicks "Continue to Dashboard"
+      
+      // Update user context with new profile/preferences (onboarded still false)
       if (user) {
         setUser({ 
           ...user, 
@@ -269,9 +261,6 @@ export default function OnboardingPage() {
           preferences: cleanPreferences 
         });
       }
-
-      // Don't redirect yet - user needs to see the styling advice first
-      // The button will change to "Continue to Dashboard" and handle completion
       
     } catch (error) {
       console.error("Onboarding error:", error);
@@ -292,8 +281,9 @@ export default function OnboardingPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            
+            {/* Basic Info Section */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Height */}
               <div>
                 <Label>Height (cm)</Label>
                 <input
@@ -312,7 +302,6 @@ export default function OnboardingPage() {
                 {errors.height && <p className="text-xs text-destructive mt-1">{errors.height}</p>}
               </div>
 
-              {/* Weight */}
               <div>
                 <Label>Weight (kg)</Label>
                 <input
@@ -333,8 +322,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               {/* Age */}
-               <div>
+              <div>
                 <Label>Age</Label>
                 <input
                   type="number"
@@ -352,7 +340,6 @@ export default function OnboardingPage() {
                 {errors.age && <p className="text-xs text-destructive mt-1">{errors.age}</p>}
               </div>
 
-              {/* Gender */}
               <div>
                 <Label>Gender</Label>
                 <RadioGroup
@@ -413,11 +400,11 @@ export default function OnboardingPage() {
               {errors.wearsMost && <p className="text-xs text-destructive mt-1">{errors.wearsMost}</p>}
             </div>
 
-            {/* Fit Preference (Multi-select) */}
+            {/* Fit Preference */}
             <div>
               <Label>Fit Preference (multi-select)</Label>
               <div className="grid grid-cols-3 gap-2 mt-2">
-                {["slim", "regular", "loose"].map((f) => (
+                {fitPreferenceOptions.map((f) => (
                   <div key={f} className="flex items-center space-x-2">
                     <Checkbox
                       checked={profile.fitPreference?.includes(f) || false}
@@ -546,52 +533,52 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            {/* Display styling advice if available */}
-            {stylingAdvice && (
+            {/* Display AI analysis results if available */}
+            {aiAnalysisResult && (
               <div className="p-4 border rounded-xl bg-green-50">
-                <h3 className="text-lg font-semibold mb-3 text-green-800">Your Personalized Styling Advice</h3>
-                <div className="prose prose-sm max-w-none text-green-900">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ children }) => (
-                        <p className="mb-3 last:mb-0 leading-relaxed text-green-900">{children}</p>
-                      ),
-                      strong: ({ children }) => (
-                        <strong className="font-semibold text-green-800">{children}</strong>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className="list-disc pl-6 space-y-1 mb-3 text-green-900">{children}</ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className="list-decimal pl-6 space-y-1 mb-3 text-green-900">{children}</ol>
-                      ),
-                      li: ({ children }) => (
-                        <li className="leading-relaxed text-green-900">{children}</li>
-                      ),
-                      h1: ({ children }) => (
-                        <h1 className="text-xl font-bold mb-3 mt-4 text-green-900">{children}</h1>
-                      ),
-                      h2: ({ children }) => (
-                        <h2 className="text-lg font-semibold mb-2 mt-3 text-green-900">{children}</h2>
-                      ),
-                      h3: ({ children }) => (
-                        <h3 className="text-base font-semibold mb-2 mt-2 text-green-900">{children}</h3>
-                      ),
-                    }}
-                  >
-                    {stylingAdvice}
-                  </ReactMarkdown>
+                <h3 className="text-lg font-semibold mb-3 text-green-800">AI Analysis Complete</h3>
+                <div className="space-y-3 text-sm text-green-900">
+                  {aiAnalysisResult.skinTone && (
+                    <div>
+                      <strong>Skin Tone:</strong> {aiAnalysisResult.skinTone.depth} depth, {aiAnalysisResult.skinTone.undertone} undertone
+                    </div>
+                  )}
+                  {aiAnalysisResult.styleEssence && (
+                    <div>
+                      <strong>Style Essence:</strong> {aiAnalysisResult.styleEssence}
+                    </div>
+                  )}
+                  {aiAnalysisResult.colorHarmony && (
+                    <div>
+                      <strong>Color Harmony:</strong> {aiAnalysisResult.colorHarmony}
+                    </div>
+                  )}
+                  {aiAnalysisResult.stylingLevers && (
+                    <div>
+                      <strong>Styling Recommendations:</strong>
+                      <ul className="list-disc pl-5 mt-1">
+                        {Object.entries(aiAnalysisResult.stylingLevers).map(([key, value]) => (
+                          <li key={key}>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: {value}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 <p className="text-sm text-green-700 mt-3">
-                  This advice has been saved to your profile and will be available on your dashboard.
+                  This analysis has been saved to your profile and will be used for personalized recommendations.
                 </p>
               </div>
             )}
 
             {/* Submit */}
-            <Button onClick={handleSave} disabled={submitting} className="w-full rounded-2xl h-12 text-lg">
-              {submitting ? "Analyzing & Saving Profile..." : stylingAdvice ? "Continue to Dashboard" : "Complete Profile"}
+            <Button 
+              onClick={handleSave} 
+              disabled={submitting} 
+              className="w-full rounded-2xl h-12 text-lg"
+            >
+              {submitting ? "Analyzing & Saving Profile..." : 
+               aiAnalysisResult ? "Complete Onboarding" : 
+               "Analyze Profile & Continue"}
             </Button>
           </CardContent>
         </Card>

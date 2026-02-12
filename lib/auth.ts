@@ -136,13 +136,22 @@ export async function authenticateUser(emailOrPhone: string, password: string): 
 export async function getUserById(userId: string): Promise<User | null> {
   const db = await getAdminDb();
   
+  console.log("getUserById - looking for user ID:", userId);
   const userDoc = await db.collection("users").doc(userId).get();
+  
+  console.log("getUserById - userDoc exists:", userDoc.exists);
+  console.log("getUserById - userDoc data:", userDoc.data());
   
   if (!userDoc.exists) {
     return null;
   }
   
-  return userSchema.parse(userDoc.data());
+  const userData = userDoc.data();
+  console.log("getUserById - raw user data:", userData);
+  console.log("getUserById - user profile:", userData?.profile);
+  console.log("getUserById - user preferences:", userData?.preferences);
+  
+  return userSchema.parse(userData);
 }
 
 export async function updateUser(userId: string, data: Partial<User>): Promise<User> {

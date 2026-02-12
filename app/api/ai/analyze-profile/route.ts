@@ -184,7 +184,10 @@ export async function POST(req: NextRequest) {
 
     let traits: any | null = null
 
+    console.log("AI Analysis - Starting analysis with content:", content.length, "images");
+
     for (let attempt = 0; attempt < 2; attempt++) {
+      console.log("AI Analysis - Attempt", attempt + 1);
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // Vision model that supports images
         messages: [
@@ -264,8 +267,8 @@ Return EXACTLY this JSON structure:
         continue
       }
 
-      console.log("AI Response attempt", attempt + 1, ":", analysisResult)
-      console.log("Full AI response:", JSON.stringify(response, null, 2))
+      console.log("AI Analysis - Raw response attempt", attempt + 1, ":", analysisResult)
+      console.log("AI Analysis - Full response structure:", JSON.stringify(response, null, 2))
 
       let cleanedResult = analysisResult.trim()
       
@@ -281,7 +284,7 @@ Return EXACTLY this JSON structure:
           cleanedResult = cleanedResult.replace(/```\n?/g, '').trim()
         }
         
-        console.log("Cleaned AI response:", cleanedResult)
+        console.log("AI Analysis - Cleaned response:", cleanedResult)
         
         const jsonMatch = cleanedResult.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
@@ -289,6 +292,9 @@ Return EXACTLY this JSON structure:
         } else {
           traits = JSON.parse(cleanedResult)
         }
+        console.log("AI Analysis - Successfully extracted traits:", traits);
+        console.log("AI Analysis - Trait keys:", Object.keys(traits));
+        console.log("AI Analysis - Trait count:", Object.keys(traits).length);
         break
       } catch (parseError) {
         console.error("Failed to parse AI response on attempt", attempt + 1)
@@ -310,6 +316,10 @@ Return EXACTLY this JSON structure:
     }
 
     traits.stylingAdvice = generatePersonalizedAdvice(traits)
+
+    console.log("AI Analysis - Final traits being returned:", traits);
+    console.log("AI Analysis - Final trait keys:", Object.keys(traits));
+    console.log("AI Analysis - Has stylingAdvice:", !!traits.stylingAdvice);
 
     return NextResponse.json({
       success: true,
