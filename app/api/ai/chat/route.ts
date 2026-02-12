@@ -68,39 +68,143 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build customer context for the AI
+    // Build comprehensive customer context for the AI
     const customerContext = []
     
+    // Extract AI personality analysis if available
+    const aiTraits = customerProfile?.aiExtractedTraits || {}
+    
+    // PERSONALITY & STYLE ANALYSIS SECTION
+    if (Object.keys(aiTraits).length > 0) {
+      customerContext.push(`🎯 AI PERSONALITY ANALYSIS:
+• Visual Frame Presence: ${aiTraits.visualFramePresence || 'moderate'}
+• Shoulder Balance: ${aiTraits.shoulderBalance || 'balanced'}
+• Torso-to-Leg Balance: ${aiTraits.torsoToLegBalance || 'balanced'}
+• Vertical Emphasis: ${aiTraits.verticalEmphasis || 'moderate'}
+• Horizontal Emphasis: ${aiTraits.horizontalEmphasis || 'moderate'}
+• Silhouette Structure: ${aiTraits.silhouetteStructure || 'structured'}
+• Visual Weight Distribution: ${aiTraits.visualWeightDistribution || 'balanced'}
+• Fit Observation: ${aiTraits.fitObservation || 'tailored'}
+
+OPTIMAL STYLING LEVERS:
+• Jacket Length: ${aiTraits.stylingLevers?.recommendedJacketLength || 'standard'}
+• Trouser Rise: ${aiTraits.stylingLevers?.recommendedTrouserRise || 'mid-rise'}
+• Lapel Strategy: ${aiTraits.stylingLevers?.lapelStrategy || 'medium'}
+• Taper Strategy: ${aiTraits.stylingLevers?.taperStrategy || 'slight'}
+• Fabric Weight: ${aiTraits.stylingLevers?.fabricWeightSuggestion || 'medium'}
+• Color Contrast: ${aiTraits.stylingLevers?.colorContrastStrategy || 'medium'}`)
+    }
+    
+    // COMPREHENSIVE PROFILE SECTION
     if (customerProfile) {
-      customerContext.push(`Customer Profile: ${JSON.stringify(customerProfile, null, 2)}`)
+      const profileSections = []
+      
+      // Basic Demographics
+      if (customerProfile.age || customerProfile.gender) {
+        profileSections.push(`Age: ${customerProfile.age || 'Not specified'}, Gender: ${customerProfile.gender || 'Not specified'}`)
+      }
+      
+      // Physical Characteristics
+      if (customerProfile.height || customerProfile.weight) {
+        profileSections.push(`Height: ${customerProfile.height || 'Not specified'}cm, Weight: ${customerProfile.weight || 'Not specified'}kg`)
+      }
+      
+      // Style Preferences
+      if (customerProfile.wearsMost && customerProfile.wearsMost.length > 0) {
+        profileSections.push(`Wears Most: ${customerProfile.wearsMost.join(', ')}`)
+      }
+      
+      if (customerProfile.fitPreference && customerProfile.fitPreference.length > 0) {
+        profileSections.push(`Fit Preference: ${customerProfile.fitPreference.join(', ')}`)
+      }
+      
+      if (customerProfile.colorComfort) {
+        profileSections.push(`Color Comfort: ${customerProfile.colorComfort}`)
+      }
+      
+      if (customerProfile.avoids && customerProfile.avoids.length > 0) {
+        profileSections.push(`Avoids: ${customerProfile.avoids.join(', ')}`)
+      }
+      
+      // Visual Properties - Use AI-extracted visual analysis
+      const aiSkinTone = aiTraits.skinTone // {depth, undertone} object
+      const aiStyleEssence = aiTraits.styleEssence
+      const aiColorHarmony = aiTraits.colorHarmony
+      const manualSkinTone = customerProfile.skinTone
+      const manualPhysique = customerProfile.physique
+      
+      // Build visual properties from AI analysis
+      if (customerProfile.hairColor) {
+        profileSections.push(`Hair Color: ${customerProfile.hairColor}`)
+      }
+      
+      // Use AI skin tone analysis (visual properties only)
+      if (aiSkinTone && aiSkinTone.depth && aiSkinTone.undertone) {
+        profileSections.push(`Visual Skin Properties: Depth-${aiSkinTone.depth}, Undertone-${aiSkinTone.undertone} (AI-visual)`)
+      } else if (manualSkinTone) {
+        profileSections.push(`Skin Tone: ${manualSkinTone} (manually entered)`)
+      }
+      
+      // Use AI style essence and color harmony
+      if (aiStyleEssence) {
+        profileSections.push(`Style Essence: ${aiStyleEssence} (AI-visual)`)
+      }
+      
+      if (aiColorHarmony) {
+        profileSections.push(`Color Harmony: ${aiColorHarmony} (AI-visual)`)
+      }
+      
+      // Use manual physique as fallback (no AI physique analysis)
+      if (manualPhysique) {
+        profileSections.push(`Physique: ${manualPhysique} (manually entered)`)
+      }
+      
+      if (customerProfile.dressingPurpose) {
+        profileSections.push(`Primary Dressing Purpose: ${customerProfile.dressingPurpose}`)
+      }
+      
+      customerContext.push(`👤 CUSTOMER PROFILE:\n${profileSections.join('\n')}`)
     }
     
+    // PREFERENCES & BUDGET SECTION
     if (customerPreferences) {
-      customerContext.push(`Customer Preferences: ${JSON.stringify(customerPreferences, null, 2)}`)
+      const prefSections = []
+      
+      if (customerPreferences.budgetMin || customerPreferences.budgetMax) {
+        prefSections.push(`Budget Range: ${customerPreferences.currency || 'INR'} ${customerPreferences.budgetMin || '0'} - ${customerPreferences.budgetMax || 'unlimited'}`)
+      }
+      
+      if (customerPreferences.currency) {
+        prefSections.push(`Preferred Currency: ${customerPreferences.currency}`)
+      }
+      
+      customerContext.push(`💰 CUSTOMER PREFERENCES:\n${prefSections.join('\n')}`)
     }
     
+    // WARDROBE STATUS SECTION
     if (wardrobeUploaded !== undefined) {
-      customerContext.push(`Wardrobe Status: ${wardrobeUploaded ? 'Uploaded' : 'Not uploaded'}`)
+      customerContext.push(`👕 WARDROBE STATUS: ${wardrobeUploaded ? 'Items uploaded ✓' : 'No items uploaded yet'}`)
     }
     
-    if (outfitPlanCount !== undefined) {
-      customerContext.push(`Previous Outfit Plans: ${outfitPlanCount}`)
+    if (outfitPlanCount !== undefined && outfitPlanCount > 0) {
+      customerContext.push(`📋 PREVIOUS OUTFIT PLANS: ${outfitPlanCount} plans generated`)
     }
     
+    // DETAILED WARDROBE INVENTORY
     if (wardrobeItems.length > 0) {
-      const wardrobeSummary = wardrobeItems.map(item => 
-        `- ${item.name} (${item.type || item.category || 'clothing'}, ${item.color || 'various colors'}, ${item.season || 'all seasons'})`
+      const wardrobeSummary = wardrobeItems.map((item, index) => 
+        `${index + 1}. ${item.name} (${item.type || item.category || 'clothing'}, ${item.color || 'various colors'}, ${item.season || 'all seasons'})`
       ).join('\n')
-      customerContext.push(`CURRENT WARDROBE INVENTORY (${wardrobeItems.length} items):\n${wardrobeSummary}\n\nIMPORTANT: You can ONLY use these specific items when making outfit suggestions. Do not suggest any items not listed above.`)
+      customerContext.push(`🧥 CURRENT WARDROBE INVENTORY (${wardrobeItems.length} items):\n${wardrobeSummary}\n\n⚠️ CRITICAL: You can ONLY use these specific items when making outfit suggestions. Do not suggest any items not listed above.`)
     } else {
-      customerContext.push(`CURRENT WARDROBE: No items uploaded yet`)
+      customerContext.push(`🧥 CURRENT WARDROBE: No items uploaded yet`)
     }
 
     // Different system prompts based on intent
     let systemPrompt: string
     
     if (intent === "general") {
-      systemPrompt = `You are a high-end personal stylist working with VIP fashion clients. Respond like a luxury fashion consultant who charges $500/hour for styling advice.
+      systemPrompt = `You are a high-end personal stylist working with VIP fashion clients. You have access to their AI-powered personality analysis that reveals their visual presence, body proportions, and optimal styling levers - use this intelligence to provide hyper-personalized advice.
 
 Customer Context:
 ${customerContext.join('\n')}
@@ -112,20 +216,44 @@ Your role is to provide expert, sophisticated fashion advice. You should:
 4. Reference current trends and timeless style principles
 5. Be confident in your recommendations
 
-IMPORTANT WARDROBE AWARENESS RULES:
+AI PERSONALITY ANALYSIS USAGE:
+- CRITICAL: Always reference their AI personality analysis when giving advice
+- Use their visual frame presence to determine outfit boldness/structure
+- Apply their body proportions to recommend optimal silhouettes
+- Follow their styling levers (jacket length, rise, lapel width, taper) for perfect fit
+- Consider their silhouette structure (structured vs relaxed) for fabric choices
+- Use their visual weight distribution to balance outfits appropriately
+- Match their fit observation (tailored/loose/balanced) for comfort and style
+
+VISUAL PROPERTIES & COLOR ANALYSIS:
+- Reference their AI-visual skin tone properties (depth and undertone) for color harmony
+- Use their color harmony analysis (neutral-dominant|warm-dominant|cool-dominant|mixed) for palette suggestions
+- Apply their style essence (classic|minimal|modern|bold|relaxed) for aesthetic coherence
+- Consider contrast levels that work with their visual properties
+- Prioritize AI-visual analysis over manual entries for accuracy
+
+VISUAL STRUCTURE ANALYSIS:
+- Use their visual frame presence to determine outfit boldness/structure
+- Apply their body proportions to recommend optimal silhouettes
+- Follow their styling levers for perfect fit coordination
+- Consider their silhouette structure (structured|moderate|relaxed) for fabric choices
+- Use their visual weight distribution to balance outfits appropriately
+- Match their fit observation (close-fitting|balanced|loose) for comfort and style
+
+WARDROBE AWARENESS RULES:
 - When discussing items, ONLY reference what the customer actually has in their wardrobe (provided above)
 - If customer asks about items they don't have, explain what they could look for or suggest alternatives from their existing wardrobe
 - Be creative with combining their existing items rather than suggesting new purchases
 - Always acknowledge their current wardrobe inventory when giving advice
 
 SHOPPING ADVICE GUIDELINES:
-- When customer explicitly asks for shopping advice or what to buy, analyze their current wardrobe gaps and needs
-- Suggest specific items that would complement their existing wardrobe and fill identified gaps
-- Consider their profile (body type, style preferences, color palette) when recommending purchases
-- Prioritize versatile, mix-and-match pieces that work with multiple existing items
-- Provide specific shopping categories, styles, colors, and features to look for
-- Explain WHY each suggested item would be valuable for their wardrobe
-- Suggest budget-friendly options and investment pieces appropriately
+- When customer explicitly asks for shopping advice, use their AI analysis to suggest perfect items
+- Recommend specific jacket lengths, trouser rises, lapel widths based on their styling levers
+- Suggest fabric weights that match their silhouette structure
+- Propose colors that work with their AI-visual skin tone properties and color harmony analysis
+- Explain WHY each suggested item would be valuable for their visual properties and style essence
+- Reference their AI-visual structure when suggesting flattering silhouettes
+- Use their AI-visual color properties to recommend complementary colors and contrasts
 
 RESPONSE STYLE - HIGH-END STYLIST TONE:
 - Use section headings and bullet points for clarity
@@ -133,6 +261,7 @@ RESPONSE STYLE - HIGH-END STYLIST TONE:
 - Avoid generic phrases like "certainly" or "based on your preferences"
 - Use fashion-forward language without being pretentious
 - Be direct and confident in your recommendations
+- Reference their specific AI analysis results naturally in your advice
 
 GENERAL ADVICE OUTPUT FORMAT (WHEN GIVING STYLING TIPS):
 - Start with 1–2 short sentences acknowledging the request and context
@@ -170,8 +299,8 @@ These pieces will create 10+ new outfits with your existing items..."
 
 Always maintain a helpful and consultative tone. Reference the customer's profile, preferences, and existing wardrobe when giving advice.`
     } else {
-      // For "plan" intent - keep the table format
-      systemPrompt = `You are a professional AI stylist assistant for a BDR (Business Development Representative) working with fashion customers. 
+      // For "plan" intent - keep the table format but with personality analysis
+      systemPrompt = `You are a professional AI stylist assistant for a BDR (Business Development Representative) working with fashion customers. You have access to their AI-powered personality analysis that reveals their visual presence, body proportions, and optimal styling levers.
 
 Customer Context:
 ${customerContext.join('\n')}
@@ -182,6 +311,28 @@ Your role is to help BDRs provide personalized fashion advice and outfit recomme
 3. Consider factors like occasion, weather, personal style, and wardrobe availability
 4. Help generate outfit plans that match the customer's profile and preferences
 5. Be concise but comprehensive in your responses
+
+AI PERSONALITY ANALYSIS FOR OUTFIT PLANNING:
+- Use their visual frame presence to determine outfit boldness and structure level
+- Apply their body proportions to recommend optimal silhouettes and fits
+- Follow their styling levers (jacket length, rise, lapel width, taper) for perfect coordination
+- Consider their silhouette structure (structured vs relaxed) for outfit cohesion
+- Use their visual weight distribution to balance complete looks
+- Match their fit observation (tailored/loose/balanced) for comfort and style consistency
+
+VISUAL COLOR COORDINATION:
+- Reference their AI-visual skin tone properties (depth and undertone) for color harmony across outfits
+- Use their color harmony analysis (neutral-dominant|warm-dominant|cool-dominant|mixed) for palette suggestions
+- Apply their style essence (classic|minimal|modern|bold|relaxed) for aesthetic coherence across all days
+- Consider contrast levels that work with their visual properties for cohesive looks
+
+VISUAL STRUCTURE-BASED OUTFIT PLANNING:
+- Use their visual frame presence to determine outfit boldness and structure level
+- Apply their body proportions to recommend optimal silhouettes and fits
+- Follow their styling levers (jacket length, rise, lapel width, taper) for perfect coordination
+- Consider their silhouette structure (structured|moderate|relaxed) for outfit cohesion
+- Use their visual weight distribution to balance complete looks
+- Match their fit observation (close-fitting|balanced|loose) for comfort and style consistency
 
 IMPORTANT WARDROBE AWARENESS RULES:
 - When suggesting shopping items: NEVER recommend items that the customer already has in their wardrobe
@@ -196,20 +347,21 @@ CRITICAL OUTPUT FORMAT REQUIREMENT:
 - The table should be the ONLY content in your response - NO additional text, explanations, or sections
 - Each row should represent one outfit with all necessary details
 - Use simple, clear language in table cells
+- Reference their AI analysis in the Extra Notes when relevant (e.g., "Perfect for your balanced proportions" or "Complements your structured silhouette")
 - Example format (THIS IS YOUR ENTIRE RESPONSE):
 Day | Outfit | Extra Notes
-Day 1 | Office Professional - White shirt, Navy blazer, Black trousers | Perfect for business meetings, polished look
-Day 2 | Casual Chic - Denim jacket, White tee, Dark jeans | Comfortable yet stylish for client visits
-Day 3 | Evening Dinner - Black dress, Heels, Statement necklace | Elegant look for dinner dates
-Day -1 | Travel Prep - Comfortable leggings, Oversized sweater | For packing and preparation day
+Day 1 | Office Professional - White shirt, Navy blazer, Black trousers | Perfect for your strong visual frame and warm-dominant coloring - navy complements your depth
+Day 2 | Casual Chic - Denim jacket, White tee, Dark jeans | Relaxed structure matches your moderate silhouette, white tee great contrast for your undertone
+Day 3 | Evening Dinner - Black dress, Heels, Statement necklace | Elegant look that complements your balanced proportions and color harmony
+Day -1 | Travel Prep - Comfortable leggings, Oversized sweater | Relaxed structure perfect for your fit observation and style essence
 
 **IMPORTANT: DO NOT ADD ANY TEXT BEFORE OR AFTER THE TABLE**
 
-Always maintain a helpful and consultative tone. Reference the customer's profile, preferences, and existing wardrobe when making suggestions.`
+Always maintain a helpful and consultative tone. Reference the customer's AI personality analysis, profile, preferences, and existing wardrobe when making suggestions.`
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o", // Upgrade to GPT-4o for better personality analysis
       messages: [
         {
           role: "system",
@@ -220,8 +372,8 @@ Always maintain a helpful and consultative tone. Reference the customer's profil
           content: message
         }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 800, // Increased for more detailed personality-based advice
+      temperature: 0.3, // Lower temperature for more consistent personality analysis
     })
 
     const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again."

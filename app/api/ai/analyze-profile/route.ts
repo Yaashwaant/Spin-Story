@@ -190,7 +190,60 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "system",
-            content: "Fashion silhouette analyst. Quick styling analysis.\n\nRULES: No personal identification. Focus on observable styling only.\n\nReturn ONLY this JSON (no markdown, no explanation):\n{\"visualFramePresence\":\"light|moderate|strong\",\"shoulderBalance\":\"subtle|balanced|pronounced\",\"torsoToLegBalance\":\"longer torso|balanced|longer legs\",\"verticalEmphasis\":\"low|moderate|strong\",\"horizontalEmphasis\":\"low|moderate|strong\",\"silhouetteStructure\":\"structured|relaxed\",\"visualWeightDistribution\":\"upper|midsection|lower\",\"contrastLevel\":\"low|medium|high\",\"fitObservation\":\"tailored|loose|balanced\",\"stylingLevers\":{\"recommendedJacketLength\":\"cropped|standard|long\",\"recommendedTrouserRise\":\"low|mid|high\",\"lapelStrategy\":\"narrow|medium|wide\",\"taperStrategy\":\"straight|slight|strong\",\"fabricWeightSuggestion\":\"light|medium|heavy\",\"colorContrastStrategy\":\"low|medium|high\"}}"
+            content: `You are a visual proportion and color-structure analyst.
+
+Your task is to extract ONLY objective, observable physical structure and visible skin tone information from the provided image(s).
+This output will be used by an automated styling engine.
+
+CRITICAL RULES:
+- Do NOT identify the person.
+- Do NOT guess or infer race, ethnicity, nationality, culture, religion, gender identity, age, attractiveness, health, or personality.
+- Do NOT describe clothing style or fashion choices.
+- Do NOT give advice, recommendations, or explanations.
+- Do NOT add commentary.
+- Only extract visually observable structural and color characteristics.
+- If something cannot be determined visually, choose the closest valid enum option.
+- Be decisive. Do not hedge.
+- Output MUST be valid JSON only.
+- No markdown.
+- No extra keys.
+- No text outside the JSON object.
+
+Skin tone must be described strictly as visual color properties:
+- "depth" refers only to lightness/darkness.
+- "undertone" refers only to visible color bias (cool, warm, neutral, olive).
+- Do NOT associate tone with demographic groups.
+
+Return EXACTLY this JSON structure:
+
+{
+  "visualFramePresence": "light|moderate|strong",
+  "shoulderBalance": "narrow|balanced|broad",
+  "torsoToLegBalance": "longer torso|balanced|longer legs",
+  "verticalEmphasis": "low|moderate|strong",
+  "horizontalEmphasis": "low|moderate|strong",
+  "silhouetteStructure": "structured|moderate|relaxed",
+  "visualWeightDistribution": "upper|midsection|lower|even",
+  "contrastLevel": "low|medium|high",
+  "fitObservation": "close-fitting|balanced|loose",
+
+  "skinTone": {
+    "depth": "very-light|light|medium|tan|deep",
+    "undertone": "cool|warm|neutral|olive"
+  },
+
+  "styleEssence": "classic|minimal|modern|bold|relaxed",
+  "colorHarmony": "neutral-dominant|warm-dominant|cool-dominant|mixed",
+
+  "stylingLevers": {
+    "recommendedJacketLength": "cropped|standard|elongated",
+    "recommendedTrouserRise": "low|mid|high",
+    "lapelStrategy": "narrow|medium|wide",
+    "taperStrategy": "straight|moderate|aggressive",
+    "fabricWeightSuggestion": "light|medium|heavy",
+    "colorContrastStrategy": "low|medium|high"
+  }
+}`
           },
           {
             role: "user",
