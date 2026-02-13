@@ -15,14 +15,14 @@ export function Footer() {
         >
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="font-display text-xl font-bold">
-              Spin <span className="text-gradient">Story</span>
+              The Spin <span className="text-gradient">Story</span>
             </div>
           </div>
           <p className="text-muted-foreground text-sm mb-4">
             Your personal AI stylist that knows your style, body, and preferences.
           </p>
           <div className="text-muted-foreground text-xs">
-            © 2026 Spin Story  All rights reserved.
+            © 2026 The Spin Story  All rights reserved.
           </div>
         </motion.div>
       </div>

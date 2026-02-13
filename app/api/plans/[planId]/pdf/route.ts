@@ -941,7 +941,7 @@ function generatePlanHTML(plan: OutfitPlan, customerName?: string, wardrobeItems
     <body>
       <div class="container">
         <div class="header">
-          <h1>Spin Story</h1>
+          <h1>The Spin Story</h1>
         </div>
         
         <div class="content">

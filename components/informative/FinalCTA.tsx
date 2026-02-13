@@ -35,7 +35,7 @@ export function FinalCTA() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/login" className="inline-flex items-center">
               <Button size="lg" className="text-base px-10 py-6">
-                Login to Spin Story
+                Login to The Spin Story
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </a>

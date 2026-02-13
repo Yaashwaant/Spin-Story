@@ -38,7 +38,7 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.3 }}
             className="text-5xl sm:text-6xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight mb-6"
           >
-            Spin{" "}
+            The Spin{" "}
             <span className="text-gradient italic">Story</span>
           </motion.h1>
 

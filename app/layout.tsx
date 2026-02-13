@@ -12,7 +12,7 @@ const playfairDisplay = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: "Spin Story - Your AI Wardrobe Assistant",
+  title: "The Spin Story - Your AI Wardrobe Assistant",
   description: "AI-powered wardrobe management and outfit recommendations",
   generator: "v0.app",
   icons: {

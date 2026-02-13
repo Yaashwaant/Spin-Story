@@ -28,7 +28,7 @@ export function StylistIntro() {
             <span className="text-gradient italic">Knows You</span>
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Unlike generic fashion apps, Spin Story learns your unique style, understands your body type, 
+            Unlike generic fashion apps, The Spin Story learns your unique style, understands your body type, 
             and considers your lifestyle to create outfits that make you feel confident and authentic.
           </p>
         </motion.div>

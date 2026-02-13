@@ -35,7 +35,7 @@ export function Navbar() {
     >
       <div className="container mx-auto flex items-center justify-between py-4 px-6">
         <a href="#" className="font-display text-2xl font-bold text-foreground tracking-tight">
-          Spin <span className="text-gradient">Story</span>
+          The Spin <span className="text-gradient">Story</span>
         </a>
 
         {/* Desktop Nav */}

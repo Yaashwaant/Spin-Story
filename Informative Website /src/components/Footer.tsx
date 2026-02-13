@@ -22,7 +22,7 @@ const Footer = () => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            © 2026 Spin Story. All rights reserved.
+            © 2026 The Spin Story. All rights reserved.
           </p>
         </div>
       </div>

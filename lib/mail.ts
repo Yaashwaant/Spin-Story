@@ -15,7 +15,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function sendVerificationEmail(to: string, code: string) {
   await transporter.sendMail({
-    from: `"Spin Story" <${process.env.GMAIL_USER}>`,
+    from: `"The Spin Story" <${process.env.GMAIL_USER}>`,
     to,
     subject: 'Verify your e-mail',
     text: `Your verification code is ${code}. It expires in 15 minutes.`,
@@ -28,9 +28,9 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}`;
 
   await transporter.sendMail({
-    from: `"Spin Story" <${process.env.GMAIL_USER}>`,
+    from: `"The Spin Story" <${process.env.GMAIL_USER}>`,
     to,
-    subject: 'Reset your Spin Story password',
+    subject: 'Reset your The Spin Story password',
     html: `
       <p>You requested a password reset.</p>
       <p><a href="${resetUrl}">Click here to reset your password</a></p>

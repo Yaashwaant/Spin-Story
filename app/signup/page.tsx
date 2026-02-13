@@ -46,7 +46,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold font-serif">Spin Story</h1>
+          <h1 className="text-3xl font-bold font-serif">The Spin Story</h1>
           <p className="text-muted-foreground font-serif">Your AI Wardrobe Assistant</p>
         </div>
         

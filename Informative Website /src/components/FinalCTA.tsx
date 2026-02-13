@@ -33,7 +33,7 @@ const FinalCTA = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/login" className="inline-flex items-center">
               <Button variant="hero" size="lg" className="text-base px-10 py-6">
-                Start with Spin Story
+                Start with The Spin Story
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </a>

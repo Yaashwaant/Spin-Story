@@ -1,4 +1,4 @@
-# Spin Story – Marketing Site
+# The Spin Story – Marketing Site
 
 Static landing-page built with Vite + React + Tailwind + shadcn/ui.
 

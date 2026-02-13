@@ -21,7 +21,7 @@ const StylistIntro = () => {
             transition={{ duration: 0.6 }}
             className="text-sm font-medium uppercase tracking-[0.2em] text-primary mb-4"
           >
-            Why Spin Story
+            Why The Spin Story
           </motion.p>
 
           <motion.h2
@@ -42,7 +42,7 @@ const StylistIntro = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-muted-foreground mb-12 max-w-xl mx-auto"
           >
-            Most fashion advice is generic. Spin Story's AI stylist is different. It doesn't guess — it styles based on data.{" "}
+            Most fashion advice is generic. The Spin Story's AI stylist is different. It doesn't guess — it styles based on data.{" "}
             <span className="text-foreground font-medium">Your data.</span>
           </motion.p>
 
