@@ -27,8 +27,9 @@ export async function uploadToCloudinary(
         {
           folder,
           public_id: publicId,
-          resource_type: 'auto',
+          resource_type: 'image',
           overwrite: true,
+          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
         },
         (error, result) => {
           if (error) {
