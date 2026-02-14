@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import chromium from "chrome-aws-lambda"
+import chromium from "@sparticuz/chromium"
 import { adminDb } from "@/lib/firebase-admin"
 
 // Helper function to create clickable item links in text
