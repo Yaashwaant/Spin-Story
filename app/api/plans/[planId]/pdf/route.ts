@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import chromium from "@sparticuz/chromium"
-import puppeteer from "puppeteer-core"
 import { adminDb } from "@/lib/firebase-admin"
 
 // Helper function to create clickable item links in text
@@ -1012,45 +1010,33 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-    })
-    
-    const page = await browser.newPage()
-    
     // Generate HTML content
     const htmlContent = generatePlanHTML(planData, customerName, wardrobeItems)
-    
-    await page.setContent(htmlContent, { 
-      waitUntil: 'networkidle0',
-      timeout: 30000
+
+    // Send HTML to Gotenberg for PDF generation
+    const form = new FormData()
+    form.append('files', new Blob([htmlContent], { type: 'text/html' }), 'index.html')
+    form.append('paperWidth', '210')   // A4 width in mm
+    form.append('paperHeight', '297')  // A4 height in mm
+    form.append('marginTop', '20')
+    form.append('marginRight', '20')
+    form.append('marginBottom', '20')
+    form.append('marginLeft', '20')
+    form.append('printBackground', 'true')
+    form.append('preferCssPageSize', 'true')
+
+    const gotenbergRes = await fetch('https://demo.gotenberg.dev/forms/chromium/convert/html', {
+      method: 'POST',
+      body: form
     })
-    
-    // Generate PDF with clickable links enabled
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      },
-      displayHeaderFooter: false,
-      preferCSSPageSize: true,
-      // Enable clickable links in PDF
-      outline: true,
-      tagged: true
-    })
-    
-    await browser.close()
-    
-    // Return PDF as response - convert Uint8Array to Buffer
+
+    if (!gotenbergRes.ok) {
+      throw new Error(`Gotenberg error: ${gotenbergRes.status} ${gotenbergRes.statusText}`)
+    }
+
+    const pdfBuffer = await gotenbergRes.arrayBuffer()
+
+    // Return PDF as response
     const buffer = Buffer.from(pdfBuffer)
     return new NextResponse(buffer, {
       status: 200,
