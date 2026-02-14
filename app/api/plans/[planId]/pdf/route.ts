@@ -1016,17 +1016,15 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     // Send HTML to Gotenberg for PDF generation
     const form = new FormData()
     form.append('files', new Blob([htmlContent], { type: 'text/html' }), 'index.html')
-    // Gotenberg expects sizes in inches (same as Puppeteer)
-    // A4: 8.27 x 11.7 inches, ~0.79 in margins (~20 mm)
-    form.append('paperWidth', '8.27')
-    form.append('paperHeight', '11.7')
-    form.append('marginTop', '0.79')
-    form.append('marginRight', '0.79')
-    form.append('marginBottom', '0.79')
-    form.append('marginLeft', '0.79')
+    form.append('paperWidth', '210mm')
+    form.append('paperHeight', '297mm')
+    form.append('marginTop', '20mm')
+    form.append('marginRight', '20mm')
+    form.append('marginBottom', '20mm')
+    form.append('marginLeft', '20mm')
     form.append('printBackground', 'true')
     form.append('preferCssPageSize', 'true')
-    form.append('scale', '1')
+    form.append('scale', '1')          // 100 % zoom
 
     const gotenbergRes = await fetch('https://demo.gotenberg.dev/forms/chromium/convert/html', {
       method: 'POST',
@@ -1058,8 +1056,5 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }, { status: 500 })
   }
 }
-
-
-
 
 
