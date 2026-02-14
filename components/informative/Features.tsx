@@ -15,7 +15,7 @@ const features = [
     icon: CalendarDays,
     title: "Smart Outfit Planning",
     description:
-      "Generate week plans, trip packing plans, and occasion-specific styling plans. Each plan is tailored to your wardrobe and personal profile. Download as PDF or share via WhatsApp.",
+      "Generate week plans, trip packing plans, and occasion-specific styling plans. Each plan is tailored to your wardrobe and personal profile. Download as PDF.",
     tags: ["Week Plans", "Packing", "PDF Export"],
   },
   {
