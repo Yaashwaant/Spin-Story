@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import chromium from "@sparticuz/chromium"
+import puppeteer from "puppeteer-core"
 import { adminDb } from "@/lib/firebase-admin"
 
 // Helper function to create clickable item links in text
@@ -1012,7 +1013,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }
 
     // Generate PDF using Puppeteer
-    const browser = await chromium.puppeteer.launch({
+    const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
