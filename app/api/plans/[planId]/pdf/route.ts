@@ -1024,6 +1024,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     form.append('marginLeft', '20')
     form.append('printBackground', 'true')
     form.append('preferCssPageSize', 'true')
+    form.append('scale', '1')          // 100 % zoom
 
     const gotenbergRes = await fetch('https://demo.gotenberg.dev/forms/chromium/convert/html', {
       method: 'POST',
@@ -1055,6 +1056,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }, { status: 500 })
   }
 }
+
 
 
 
